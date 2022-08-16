@@ -422,7 +422,6 @@ func setProperty(sn, lineNo string, payload []byte, client mqtt.Client) {
 
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
-	fmt.Printf("modbus: write ,msg: 0x% x\n", cmd)
 	out, err := server.DownloadCommand(ctx, addr, cmd)
 	if err != nil {
 		e = err
@@ -449,7 +448,6 @@ func setProperty(sn, lineNo string, payload []byte, client mqtt.Client) {
 		e = fmt.Errorf("错误的设备响应，请稍后重试,data:% x", out)
 		return
 	}
-	fmt.Printf("modbus: write ,msg: 0x% x\n", out)
 	e = fmt.Errorf("执行失败！错误代码：%v", res)
 }
 
