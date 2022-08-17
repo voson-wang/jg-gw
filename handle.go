@@ -138,7 +138,8 @@ func handleUploadPacket(addr net.Addr, data []byte, answer func(payload []byte) 
 				log.Error().Err(err).Msg("get lineModel failed")
 				continue
 			}
-			if err := mq.Publish(config.ProjectName()+"/"+sn+"/"+lineModel+"/"+lineNo+"/property", 1, false, liveData); err != nil {
+			liveData["LineModel"] = lineModel
+			if err := mq.Publish(config.ProjectName()+"/"+sn+"/"+lineNo+"/property", 1, false, liveData); err != nil {
 				log.Error().Err(err).Msg("")
 			}
 			log.Debug().Interface("liveData", liveData).Msg("设备实时数据")
@@ -427,13 +428,8 @@ func setProperty(sn, lineNo string, payload []byte, client mqtt.Client) {
 	if res == 0x00 {
 		go func() {
 			if IsAlarmSetting(targetRwRegisters) {
-				lineModel, err := util.GetLineModel(lineNo)
-				if err != nil {
-					log.Error().Err(err).Msg("get lineModel failed")
-					return
-				}
 				// 推送设备属性
-				if err := mq.Publish(config.ProjectName()+"/"+sn+"/"+lineModel+"/"+lineNo+"/property", 1, false, request.Params); err != nil {
+				if err := mq.Publish(config.ProjectName()+"/"+sn+"/"+lineNo+"/property", 1, false, request.Params); err != nil {
 					log.Error().Err(err).Msg("")
 				}
 			}
