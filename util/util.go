@@ -13,7 +13,8 @@ func BytesToString(data []byte) string {
 	return ss
 }
 
-func GetModel(data string) (string, error) {
+// GetLineModel 京硅线路的编号开头两位决定了线路型号
+func GetLineModel(data string) (string, error) {
 	var model string
 	switch data[0:2] {
 	case "04":
