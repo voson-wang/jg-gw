@@ -3,7 +3,7 @@ package main
 import (
 	"e.coding.net/ricnsmart/service/jg-modbus"
 	"fmt"
-	"jg-gateway/util"
+	"jg-gw/util"
 	"reflect"
 )
 

@@ -3,7 +3,7 @@ package mq
 import (
 	"encoding/json"
 	"github.com/eclipse/paho.mqtt.golang"
-	"jg-gateway/config"
+	"jg-gw/config"
 	"log"
 	"os"
 )

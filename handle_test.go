@@ -3,8 +3,8 @@ package main
 import (
 	"fmt"
 	mqtt "github.com/eclipse/paho.mqtt.golang"
-	"jg-gateway/config"
-	"jg-gateway/mq"
+	"jg-gw/config"
+	"jg-gw/mq"
 	"log"
 	"os"
 	"testing"
@@ -19,7 +19,7 @@ func Test_setProperty(t *testing.T) {
 
 	config.Init()
 
-	topic := "jg-gateway/" + sn + "/" + lineNo + "/property/set"
+	topic := "jg-gw/" + sn + "/" + lineNo + "/property/set"
 
 	tests := []struct {
 		name string
@@ -132,7 +132,7 @@ func Test_invokeService(t *testing.T) {
 
 	config.Init()
 
-	topic := "jg-gateway/" + sn + "/service"
+	topic := "jg-gw/" + sn + "/service"
 
 	tests := []struct {
 		name string

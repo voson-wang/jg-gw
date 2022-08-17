@@ -1,4 +1,4 @@
-module jg-gateway
+module jg-gw
 
 go 1.19
 

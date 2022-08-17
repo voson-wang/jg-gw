@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"github.com/joho/godotenv"
 	"golang.org/x/mod/modfile"
-	"io/ioutil"
+	"io"
 	"log"
 	"net/http"
 	"os"
@@ -57,7 +57,7 @@ func Init() {
 
 	defer resp.Body.Close()
 
-	buf, err := ioutil.ReadAll(resp.Body)
+	buf, err := io.ReadAll(resp.Body)
 	if err != nil {
 		log.Fatal(err)
 	}

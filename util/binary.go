@@ -18,20 +18,6 @@ func TwoByteToBits(data []byte, order binary.ByteOrder) (dst []byte) {
 	return
 }
 
-func BitsToTwoByte(bits []byte, order binary.ByteOrder, dst []byte) {
-
-	first := BitsToByte(bits[0:8])
-	second := BitsToByte(bits[8:16])
-
-	if order == binary.BigEndian {
-		dst[0] = second
-		dst[1] = first
-	} else {
-		dst[0] = first
-		dst[1] = second
-	}
-}
-
 // ByteToBits 字节转比特
 // 十进制转二进制数组
 func ByteToBits(d byte) []byte {
