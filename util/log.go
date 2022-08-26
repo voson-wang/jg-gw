@@ -28,5 +28,5 @@ func InitLog() {
 		return file + ":" + strconv.Itoa(line)
 	}
 
-	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr}).With().Caller().Logger()
+	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr, TimeFormat: "2006/01/02 15:04:05"}).With().Caller().Logger()
 }
