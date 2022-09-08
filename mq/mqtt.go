@@ -6,18 +6,14 @@ import (
 	"jg-gw/config"
 	"log"
 	"os"
+	"strings"
+	"time"
 )
 
-// SetOnConnectHandler 要先于Init调用
-func SetOnConnectHandler(handler mqtt.OnConnectHandler) {
-	onConn = handler
-}
-
-var onConn mqtt.OnConnectHandler
 var client mqtt.Client
 
-func Init() {
-	server := os.Getenv("MQTT_ADDRESS")
+func Init(handler mqtt.OnConnectHandler) {
+	address := os.Getenv("MQTT_ADDRESS")
 	clientId := config.Host() + "/" + config.ProjectName()
 	username := os.Getenv("MQTT_USERNAME")
 	password := os.Getenv("MQTT_PASSWORD")
@@ -28,26 +24,40 @@ func Init() {
 	}
 
 	opts := mqtt.NewClientOptions().
-		AddBroker(server).
 		SetClientID(clientId).
 		SetUsername(username).
 		SetPassword(password).
-		SetOnConnectHandler(onConn)
+		SetOnConnectHandler(handler)
+
+	for _, server := range strings.Split(address, ",") {
+		opts.AddBroker(server)
+	}
 
 	client = mqtt.NewClient(opts)
 
 	if token := client.Connect(); token.Wait() && token.Error() != nil {
 		log.Fatal(token.Error())
 	}
-}
 
-func Publish(topic string, qos byte, retained bool, data interface{}) error {
+}
+func Publish(topic string, qos byte, retained bool, data interface{}) {
 	payload, err := json.Marshal(data)
 	if err != nil {
-		return err
+		log.Println(err)
+		return
 	}
-	if token := client.Publish(topic, qos, retained, payload); token.Wait() && token.Error() != nil {
-		return token.Error()
-	}
-	return nil
+	token := client.Publish(topic, qos, retained, payload)
+	go func() {
+		ticker := time.NewTicker(60 * time.Second)
+		select {
+		// 无限期地等待令牌完成，即从代理发送发布和确认收据
+		case <-token.Done():
+			if token.Error() != nil {
+				log.Println(token.Error())
+			}
+		case <-ticker.C:
+			ticker.Stop()
+			log.Println("发布超时")
+		}
+	}()
 }

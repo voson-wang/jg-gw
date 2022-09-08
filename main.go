@@ -29,9 +29,7 @@ func main() {
 		util.PProf()
 	}
 
-	mq.SetOnConnectHandler(handleMQConn)
-
-	mq.Init()
+	mq.Init(handleMQConn)
 
 	server = jg.NewServer(fmt.Sprintf(":%v", port), handleUploadPacket)
 
@@ -119,10 +117,8 @@ func afterConnClose(addr net.Addr) {
 		snAndRemoteAddrMap.Delete(sn)
 		snAndDataMap.Delete(sn)
 		log.Warn().Str("sn", sn).Msg("设备离线")
-		if err := mq.Publish(config.ProjectName()+"/"+sn+"/event", 1, false, &Event{
+		mq.Publish(config.ProjectName()+"/"+sn+"/event", 1, false, &Event{
 			Identifier: "OFFLINE",
-		}); err != nil {
-			log.Error().Err(err).Msg("")
-		}
+		})
 	}
 }

@@ -67,7 +67,7 @@ func Test_setProperty(t *testing.T) {
 		},
 	}
 
-	mq.SetOnConnectHandler(func(client mqtt.Client) {
+	onConn := func(client mqtt.Client) {
 		client.Subscribe(config.Host()+"s0", 2, func(client mqtt.Client, message mqtt.Message) {
 			got := string(message.Payload())
 			fmt.Println(got)
@@ -109,16 +109,13 @@ func Test_setProperty(t *testing.T) {
 			fmt.Println(got)
 
 		})
-	})
+	}
 
-	mq.Init()
+	mq.Init(onConn)
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := mq.Publish(topic, 2, false, tt.args)
-			if err != nil {
-				log.Fatal(err)
-			}
+			mq.Publish(topic, 2, false, tt.args)
 		})
 	}
 
@@ -162,7 +159,7 @@ func Test_invokeService(t *testing.T) {
 		},
 	}
 
-	mq.SetOnConnectHandler(func(client mqtt.Client) {
+	onConn := func(client mqtt.Client) {
 		if token := client.Subscribe(config.Host()+"v0", 2, func(client mqtt.Client, message mqtt.Message) {
 			got := string(message.Payload())
 			fmt.Println(got)
@@ -195,16 +192,13 @@ func Test_invokeService(t *testing.T) {
 			log.Fatal(token.Error())
 		}
 
-	})
+	}
 
-	mq.Init()
+	mq.Init(onConn)
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := mq.Publish(topic, 2, false, tt.args)
-			if err != nil {
-				log.Fatal(err)
-			}
+			mq.Publish(topic, 2, false, tt.args)
 		})
 	}
 
