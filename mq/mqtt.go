@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"github.com/eclipse/paho.mqtt.golang"
 	"jg-gw/config"
+	"jg-gw/util"
 	"log"
 	"os"
 	"strings"
@@ -29,7 +30,7 @@ func Init(handler mqtt.OnConnectHandler) {
 		SetPassword(password).
 		SetOnConnectHandler(handler)
 
-	for _, server := range strings.Split(address, ",") {
+	for _, server := range util.Shuffle(strings.Split(address, ",")) {
 		opts.AddBroker(server)
 	}
 

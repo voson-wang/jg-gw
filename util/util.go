@@ -2,7 +2,9 @@ package util
 
 import (
 	"fmt"
+	"math/rand"
 	"strconv"
+	"time"
 )
 
 func BytesToString(data []byte) string {
@@ -47,4 +49,14 @@ func SetByteSN(s string) ([]byte, error) {
 		bs[index] = byte(((m / 10) << 4) + m%10)
 	}
 	return bs, nil
+}
+
+// Shuffle 数组洗牌
+func Shuffle[T any](arr []T) []T {
+	slc := make([]T, len(arr))
+	r := rand.New(rand.NewSource(time.Now().Unix()))
+	for i, randIndex := range r.Perm(len(arr)) {
+		slc[i] = arr[randIndex]
+	}
+	return slc
 }
