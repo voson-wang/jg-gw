@@ -29,6 +29,7 @@ func Test_setProperty(t *testing.T) {
 			name: "identifier缺失",
 			args: setPropertyRequest{
 				RequestId:   config.Host() + "s0",
+				LineNo:      lineNo,
 				Identifiers: []string{},
 				Params:      map[string]any{"OverLoadValue": 300},
 			},
@@ -37,6 +38,7 @@ func Test_setProperty(t *testing.T) {
 			name: "参数缺失",
 			args: setPropertyRequest{
 				RequestId:   config.Host() + "s1",
+				LineNo:      lineNo,
 				Identifiers: []string{"OverLoadValue"},
 				Params:      map[string]any{},
 			},
@@ -45,6 +47,7 @@ func Test_setProperty(t *testing.T) {
 			name: "参数类型错误",
 			args: setPropertyRequest{
 				RequestId:   config.Host() + "s2",
+				LineNo:      lineNo,
 				Identifiers: []string{"OverLoadValue"},
 				Params:      map[string]any{"OverLoadValue": 200.1},
 			},
@@ -53,6 +56,7 @@ func Test_setProperty(t *testing.T) {
 			name: "正常写入1个普通寄存器",
 			args: setPropertyRequest{
 				RequestId:   config.Host() + "s3",
+				LineNo:      lineNo,
 				Identifiers: []string{"OverVoltageValue"},
 				Params:      map[string]any{"OverVoltageValue": 260},
 			},
@@ -61,6 +65,7 @@ func Test_setProperty(t *testing.T) {
 			name: "Status",
 			args: setPropertyRequest{
 				RequestId:   config.Host() + "s6",
+				LineNo:      lineNo,
 				Identifiers: []string{"Status"},
 				Params:      map[string]any{"Status": 1},
 			},

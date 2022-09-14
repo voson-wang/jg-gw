@@ -89,16 +89,14 @@ func handleMQConn(client mqtt.Client) {
 
 	// 设置属性
 	// 相同型号的应用共享请求，使用序列号来找出所在应用
-	if token := client.Subscribe(config.ProjectName()+"/+/+/property/set", 2, func(client mqtt.Client, message mqtt.Message) {
+	if token := client.Subscribe(config.ProjectName()+"/+/property/set", 2, func(client mqtt.Client, message mqtt.Message) {
 		topic := message.Topic()
 
 		arr := strings.Split(topic, "/")
 
 		sn := arr[1]
 
-		lineNo := arr[2]
-
-		go setProperty(sn, lineNo, message.Payload(), client)
+		go setProperty(sn, message.Payload(), client)
 
 		log.Debug().Str("sn", sn).Bytes("request", message.Payload()).Msg("setProperty")
 	}); token.Wait() && token.Error() != nil {
