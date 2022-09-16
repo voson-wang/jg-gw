@@ -278,7 +278,7 @@ type CommonResponse struct {
 }
 
 type setPropertyRequest struct {
-	RequestId   string
+	RequestId   string   `json:"request_id"`
 	LineNo      string   `json:"LineNo"`
 	Identifiers []string // 如设备指向的域名、端口必须同时写入，因此这里必须是一个数组
 	Params      map[string]any
@@ -443,7 +443,7 @@ func setProperty(sn string, payload []byte, client mqtt.Client) {
 }
 
 type invokeServiceRequest struct {
-	RequestId  string
+	RequestId  string `json:"request_id"`
 	Identifier string
 	Params     map[string]any
 }
