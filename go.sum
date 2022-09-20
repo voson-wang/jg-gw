@@ -1,5 +1,5 @@
-e.coding.net/ricnsmart/service/jg-modbus v0.0.1 h1:CD7nRqxsc2GsetArq0kJs1DMZ5Q/s8ZcdmmexMt0A5U=
-e.coding.net/ricnsmart/service/jg-modbus v0.0.1/go.mod h1:c4sQK/0uWKW5d1YHup2Ul39F8G90+q6pwfkbbJ+uXD0=
+e.coding.net/ricnsmart/service/jg-modbus v0.0.2 h1:+XiHDOnUaEbwFQLfGfh0gLJ7a4Gc4safsTATPjd1PCw=
+e.coding.net/ricnsmart/service/jg-modbus v0.0.2/go.mod h1:c4sQK/0uWKW5d1YHup2Ul39F8G90+q6pwfkbbJ+uXD0=
 github.com/coreos/go-systemd/v22 v22.3.3-0.20220203105225-a9a7ef127534/go.mod h1:Y58oyj3AT4RCenI/lSvhwexgC+NSVTIJ3seZv2GcEnc=
 github.com/eclipse/paho.mqtt.golang v1.4.1 h1:tUSpviiL5G3P9SZZJPC4ZULZJsxQKXxfENpMvdbAXAI=
 github.com/eclipse/paho.mqtt.golang v1.4.1/go.mod h1:JGt0RsEwEX+Xa/agj90YJ9d9DH2b7upDZMK9HRbFvCA=

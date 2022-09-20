@@ -3,7 +3,7 @@ module jg-gw
 go 1.19
 
 require (
-	e.coding.net/ricnsmart/service/jg-modbus v0.0.1
+	e.coding.net/ricnsmart/service/jg-modbus v0.0.2
 	github.com/eclipse/paho.mqtt.golang v1.4.1
 	github.com/joho/godotenv v1.4.0
 	github.com/rs/zerolog v1.27.0
