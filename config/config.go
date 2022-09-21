@@ -47,22 +47,18 @@ func Init() {
 	// 读取环境变量文件，如果不存在则忽略
 	_ = godotenv.Load("version", ".env."+env)
 
-	url := os.Getenv("IP_QUERY_ADDRESS")
+	address := os.Getenv("IP_QUERY_ADDRESS")
 
-	// 获取项目运行环境的IP
-	resp, err := http.Get(url)
-	if err != nil {
-		log.Fatal(err, url)
+	urls := strings.Split(address, ",")
+	for _, url := range urls {
+		var err error
+		host, err = getHost(fmt.Sprintf("http://%v", url))
+		if err != nil {
+			log.Println(err, url)
+			continue
+		}
+		return
 	}
-
-	defer resp.Body.Close()
-
-	buf, err := io.ReadAll(resp.Body)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	host = string(buf)
 }
 
 func Env() string {
@@ -83,4 +79,22 @@ func MQTTDebug() bool {
 
 func Host() string {
 	return host
+}
+
+func getHost(url string) (host string, err error) {
+	// 获取项目运行环境的IP
+	resp, err := http.Get(url)
+	if err != nil {
+		return
+	}
+
+	defer resp.Body.Close()
+
+	buf, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return
+	}
+
+	host = string(buf)
+	return
 }
