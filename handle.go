@@ -278,10 +278,10 @@ type CommonResponse struct {
 }
 
 type setPropertyRequest struct {
-	RequestId   string   `json:"request_id"`
-	LineNo      string   `json:"LineNo"`
-	Identifiers []string // 如设备指向的域名、端口必须同时写入，因此这里必须是一个数组
-	Params      map[string]any
+	RequestId     string `json:"request_id"`
+	ChildDeviceNo string
+	Identifiers   []string // 如设备指向的域名、端口必须同时写入，因此这里必须是一个数组
+	Params        map[string]any
 }
 
 /*
@@ -346,7 +346,7 @@ func setProperty(sn string, payload []byte, client mqtt.Client) {
 	}
 
 	//获取终端地址
-	address, err := util.SetByteSN(request.LineNo)
+	address, err := util.SetByteSN(request.ChildDeviceNo)
 
 	targetRwRegister := targetRwRegisters[0]
 	data := make([]byte, targetRwRegisters[0].Len())
@@ -424,13 +424,13 @@ func setProperty(sn string, payload []byte, client mqtt.Client) {
 	if res == 0x00 {
 		go func() {
 			if IsAlarmSetting(targetRwRegisters) {
-				lineModel, err := util.GetLineModel(request.LineNo)
+				lineModel, err := util.GetLineModel(request.ChildDeviceNo)
 				if err != nil {
 					log.Error().Err(err).Msg("get lineModel failed")
 					return
 				}
 				// 推送设备属性
-				mq.Publish(config.ProjectName()+"/"+sn+"/"+lineModel+"/"+request.LineNo+"/property", 1, false, request.Params)
+				mq.Publish(config.ProjectName()+"/"+sn+"/"+lineModel+"/"+request.ChildDeviceNo+"/property", 1, false, request.Params)
 			}
 		}()
 		return
