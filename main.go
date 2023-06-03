@@ -12,7 +12,7 @@ import (
 	"syscall"
 )
 
-const port = 6777
+const port = 65010
 
 var (
 	GitCommitID string

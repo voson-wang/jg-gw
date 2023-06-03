@@ -64,8 +64,6 @@ func (frame *Frame) Bytes() []byte {
 
 	// 添加定界符
 	b[0] = 0x68
-	b[1] = 0x00
-	b[2] = 0x00
 	b[3] = 0x68
 	b[4] = 0x03
 
@@ -86,7 +84,7 @@ func (frame *Frame) Bytes() []byte {
 	b = append(b, cs)
 	b = append(b, 0x16)
 	b[1] = byte(len(b) - 6)
-	b[2] = byte(len(b) - 6)
+	b[2] = b[1]
 	return b
 }
 
