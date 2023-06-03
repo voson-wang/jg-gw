@@ -1,6 +1,6 @@
 package main
 
-import "ricnsmart/jg-gw/modbus"
+import "ricn-smart/ricn-jg-gw/modbus"
 
 var (
 	RWPacket = modbus.ReadAndWritableRegisters{Status, OverCurrentValue, OverCurrentDelay, OverLoadValue,

@@ -2,7 +2,7 @@ package main
 
 import (
 	"github.com/rs/zerolog/log"
-	"ricnsmart/jg-gw/modbus"
+	"ricn-smart/ricn-jg-gw/modbus"
 	"time"
 )
 

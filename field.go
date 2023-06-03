@@ -2,7 +2,7 @@ package main
 
 import (
 	"github.com/shopspring/decimal"
-	"ricnsmart/jg-gw/modbus"
+	"ricn-smart/ricn-jg-gw/modbus"
 )
 
 var SNField = NewStringField("SN", 0, 6)

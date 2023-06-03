@@ -1,7 +1,7 @@
 package main
 
 import (
-	"ricnsmart/jg-gw/util"
+	"ricn-smart/ricn-jg-gw/util"
 )
 
 type StringField struct {
