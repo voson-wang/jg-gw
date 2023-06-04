@@ -44,7 +44,7 @@ func (c *Conn) Read(size int, timeout time.Duration) (*Frame, error) {
 	}
 
 	if c.server.logLevel == DEBUG {
-		log.Printf("[OTA Server] DBG %v read: % x\n", c.rwc.RemoteAddr(), buf[:l])
+		log.Printf("[ModBus Server] DBG %v read: % x\n", c.rwc.RemoteAddr(), buf[:l])
 	}
 
 	return NewFrame(buf[:l])
@@ -62,7 +62,7 @@ func (c *Conn) Write(frame *Frame, timeout time.Duration) error {
 	}
 
 	if c.server.logLevel == DEBUG {
-		log.Printf("[OTA Server] DBG %v write: % x\n", c.rwc.RemoteAddr(), frame.Bytes())
+		log.Printf("[ModBus Server] DBG %v write: % x\n", c.rwc.RemoteAddr(), frame.Bytes())
 	}
 
 	return nil
@@ -109,7 +109,7 @@ func (s *Server) ListenAndServe() error {
 		}
 
 		if s.logLevel == DEBUG {
-			log.Printf("[OTA Server] DBG %v device online. \n", rwc.RemoteAddr())
+			log.Printf("[ModBus Server] DBG %v device online. \n", rwc.RemoteAddr())
 		}
 
 		go func() {

@@ -32,14 +32,11 @@ var (
 )
 
 func handler(conn *modbus.Conn) {
-
 	registerFrame, err := conn.Read(size, timeout)
 	if err != nil {
 		log.Error().Err(err).Str("remote", conn.Addr().String()).Msg("")
 		return
 	}
-
-	log.Debug().Hex("Function", []byte{registerFrame.Function}).Msg("register")
 
 	if registerFrame.Function == RegisterCmd {
 		values := make(map[string]any)
@@ -58,7 +55,12 @@ func handler(conn *modbus.Conn) {
 			return
 		}
 
-		log.Info().Str("sn", sn).Msg("设备上线")
+		log.Info().Str("sn", sn).Str("remote", conn.Addr().String()).Msg("设备上线")
+
+		if err := conn.Write(registerFrame, timeout); err != nil {
+			log.Error().Err(err).Msg("")
+			return
+		}
 
 		heartBeatFrame, err := conn.Read(size, timeout)
 		if err != nil {
@@ -67,6 +69,11 @@ func handler(conn *modbus.Conn) {
 		}
 
 		if heartBeatFrame.Function == HeartCmd {
+
+			if err := conn.Write(heartBeatFrame, timeout); err != nil {
+				log.Error().Err(err).Msg("")
+				return
+			}
 
 			l := len(heartBeatFrame.Data)
 			num := l / 6
@@ -91,12 +98,12 @@ func handler(conn *modbus.Conn) {
 			}
 		}
 
-		log.Warn().Str("msg", fmt.Sprintf("% x", heartBeatFrame.Bytes())).Msg("有新的链接，但是没有心跳包")
+		log.Warn().Str("msg", fmt.Sprintf("% x", heartBeatFrame.Bytes())).Hex("Function", []byte{registerFrame.Function}).Str("remote", conn.Addr().String()).Msg("收到了注册包，但是没有心跳包")
 
 		return
 	}
 
-	log.Warn().Str("msg", fmt.Sprintf("% x", registerFrame.Bytes())).Msg("有新的链接，但是没有注册包")
+	log.Warn().Hex("Function", []byte{registerFrame.Function}).Str("msg", fmt.Sprintf("% x", registerFrame.Bytes())).Str("remote", conn.Addr().String()).Msg("有新的链接，但是没有注册包")
 }
 
 func getLivedata(conn *modbus.Conn, f *modbus.Frame) (map[string]interface{}, error) {
