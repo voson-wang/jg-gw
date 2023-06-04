@@ -77,24 +77,24 @@ func (p ReadAndWritableRegisters) Decode(data []byte) map[string]any {
 	return m
 }
 
-func (p ReadAndWritableRegisters) NewReadRegisters(function uint8, cfg, address []byte) ([]byte, error) {
+func (p ReadAndWritableRegisters) NewReadRegisters(function uint8, cfg, address [6]byte) ([]byte, error) {
 	result := make([]byte, p.Len())
 	for _, register := range p {
 		start := register.Start()
 		end := start + register.Len()
 		binary.LittleEndian.PutUint16(result[start:end], register.Addr())
 	}
-	f := Frame{Function: function, Address: address, Cfg: cfg}
+	f := Frame{Function: function, Address: address}
 	f.SetData(result)
 	return f.Bytes(), nil
 }
 
-func (p ReadAndWritableRegisters) Bytes(function uint8, cfg, address []byte, params map[string]any) ([]byte, error) {
+func (p ReadAndWritableRegisters) Bytes(function uint8, cfg, address [6]byte, params map[string]any) ([]byte, error) {
 	data, err := p.Encode(params)
 	if err != nil {
 		return nil, err
 	}
-	f := Frame{Function: function, Address: address, Cfg: cfg}
+	f := Frame{Function: function, Address: address}
 	f.SetData(data)
 	return f.Bytes(), nil
 }

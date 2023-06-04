@@ -22,15 +22,6 @@ const (
 	ReadParamsCmd = uint8(0xca) // 远程参数读写
 )
 
-var (
-	livedataCfg    = []byte{0x80, 0x06, 0x00, 0x00, 0x00, 0x01, 0x40}       // 读取实时数据固定参数
-	statusCfg      = []byte{0x80, 0x06, 0x00, 0x00, 0x00, 0x01, 0x00}       // 读取开关状态固定参数
-	writeStatusCfg = []byte{0x81, 0x06, 0x00, 0x00, 0x00}                   // 写入开关状态固定参数
-	readCfg        = []byte{0x00, 0x06, 0x00, 0x00, 0x00, 0x00, 0x00}       // 读取数据固定参数
-	writeCfg       = []byte{0x01, 0x06, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00} // 写入数据固定参数
-	faultCfg       = []byte{0x00, 0x03, 0x01, 0x00, 0x00}                   // 故障信息回传固定参数
-)
-
 func handler(conn *modbus.Conn) {
 	registerFrame, err := conn.Read(size, timeout)
 	if err != nil {
@@ -85,16 +76,7 @@ func handler(conn *modbus.Conn) {
 
 			// 遥信－开关量    遥测－实时数据值
 			for i := 0; i < num; i++ {
-				heartBeatFrame.Data = heartBeatFrame.Data[6:]
 
-				// 遥测获取开关实时数据值
-				liveData, err := getLivedata(conn, heartBeatFrame)
-				if err != nil {
-					log.Debug().Err(err).Msg("get livedata failed")
-					continue
-				}
-
-				log.Debug().Interface("liveData", liveData).Msg("")
 			}
 		}
 
@@ -104,40 +86,4 @@ func handler(conn *modbus.Conn) {
 	}
 
 	log.Warn().Hex("Function", []byte{registerFrame.Function}).Str("msg", fmt.Sprintf("% x", registerFrame.Bytes())).Str("remote", conn.Addr().String()).Msg("有新的链接，但是没有注册包")
-}
-
-func getLivedata(conn *modbus.Conn, f *modbus.Frame) (map[string]interface{}, error) {
-
-	defer func() {
-		if err := recover(); err != nil {
-			log.Error().Err(fmt.Errorf("%v", err)).Msg("GetLiveDataFailed")
-		}
-	}()
-
-	in := &modbus.Frame{
-		Function: UploadLiveDataCmd,
-		Address:  f.Data[:6],
-		Cfg:      livedataCfg,
-		Data:     []byte{0x20},
-	}
-
-	err := conn.Write(in, timeout)
-	if err != nil {
-		return nil, err
-	}
-
-	out, err := conn.Read(size, timeout)
-	if err != nil {
-		return nil, err
-	}
-
-	// 忽略接收到的心跳包
-	l := len(out.Data)
-	if l < livedataReg.Len() || out.Function != UploadLiveDataCmd {
-		return nil, fmt.Errorf("未正确获取实时数据")
-	}
-	livedataMap := make(map[string]interface{})
-
-	livedataReg.Decode(out.Data, livedataMap)
-	return livedataMap, nil
 }
