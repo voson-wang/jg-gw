@@ -28,7 +28,7 @@ type Function byte
 type Frame struct {
 	Size     byte     // 长度L
 	Ctrl     Ctrl     // 控制
-	Address  [6]byte  // 终端地址
+	Address  ID       // 终端地址
 	Function Function // 命令码
 	Data     []byte   // 用户数据
 	CS       byte     // 校验CS

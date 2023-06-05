@@ -49,42 +49,68 @@ type (
 	}
 
 	HeartBeat struct {
-		ID     ID
-		NodeID []ID
+		ID      ID
+		NodeIDs []ID
+	}
+
+	Switch struct {
+		Name  string // 名称
+		Index int    // 在数据中的位置，从0开始
+
+		// 第一个字节代表开关状态：01为合闸状态，00为分闸状态；
+		// 第二个字节代表死锁状态：01为开关死锁，00为解除死锁；
+		// 其他字节同上，1为故障0为正常，长度都为 1字节，字节含义可以查看参数地址分配表中开关量来对照
+		Value byte
+	}
+
+	TelemeteringAck struct {
+		Num      byte // 信息个数
+		Switches []*Switch
 	}
 )
 
 // 终端、集中器控制
 const (
 	DeviceCtrl80 Ctrl = 0x80 // 注册、掉电、心跳
-
 	DeviceCtrl83 Ctrl = 0x83 // 故障
+	DeviceCtrl88 Ctrl = 0x88 // 遥信
 )
 
 // 主站控制
 const (
-	ServerCtrl Ctrl = 0x03 // 故障回复确认
+	ServerCtrlA Ctrl = 0x0A // 遥信、遥测
+	ServerCtrl3 Ctrl = 0x03 // 故障回复确认
 )
 
 // 命令码
 const (
-	FaultFun     Function = 0x2A
-	RegisterFun  Function = 0x8B
-	PowerDownFun Function = 0x8C
-	HeartBeatFun Function = 0x8D
+	FaultFun        Function = 0x2A
+	TelemeteringFun Function = 0x64
+	RegisterFun     Function = 0x8B
+	PowerDownFun    Function = 0x8C
+	HeartBeatFun    Function = 0x8D
 )
 
 var (
-	FaultHeader    = [5]byte{0x00, 0x03, 0x00, 0x00, 0x00}
-	FaultAckHeader = [5]byte{0x00, 0x03, 0x01, 0x00, 0x00}
+	FaultHeader           = [5]byte{0x00, 0x03, 0x00, 0x00, 0x00}
+	FaultAckHeader        = [5]byte{0x00, 0x03, 0x01, 0x00, 0x00}
+	TelemeteringAckHeader = [7]byte{0x07, 0x00, 0x00, 0x00, 0x01, 0x00, 0x20}
 )
 
-func (i *ID) String() string {
+func (i ID) String() string {
 	var s string
 	for _, v := range i {
 		s += fmt.Sprintf("%02X", v)
 	}
 	return strings.TrimLeft(s, "0")
+}
+
+func NodesString(is []ID) string {
+	var node []string
+	for _, id := range is {
+		node = append(node, id.String())
+	}
+	return strings.Join(node, ",")
 }
 
 // Time
@@ -102,10 +128,14 @@ func (t *TimeMark) Time() time.Time {
 // 扩展规约 4.1
 func (f *Frame) NewLogin() (*Login, error) {
 
+	if f.Ctrl != DeviceCtrl80 {
+		return nil, fmt.Errorf("frame ctrl error: ctrl expect 0x%x,got 0x%x", DeviceCtrl80, f.Ctrl)
+	}
+
 	data := f.Data
 
 	if len(data) < 8 {
-		return nil, fmt.Errorf("frame data error: data expect len >8,got %v", len(f.Data))
+		return nil, fmt.Errorf("frame data error: data expect len >8,got %v", len(data))
 	}
 
 	l := &Login{ID: [6]byte(data[:6])}
@@ -131,7 +161,7 @@ func (f *Frame) NewHeartBeat() (*HeartBeat, error) {
 		nodeID = append(nodeID, ID(data[i:i+6]))
 	}
 
-	h.NodeID = nodeID
+	h.NodeIDs = nodeID
 	return h, nil
 }
 
@@ -140,10 +170,14 @@ func (f *Frame) NewHeartBeat() (*HeartBeat, error) {
 // 规约 4.6.2
 func (f *Frame) NewFault() (*Fault, error) {
 
+	if f.Ctrl != DeviceCtrl83 {
+		return nil, fmt.Errorf("frame ctrl error: ctrl expect 0x%x,got 0x%x", DeviceCtrl83, f.Ctrl)
+	}
+
 	data := f.Data
 
 	if len(data) < 21 {
-		return nil, fmt.Errorf("frame data error: data expect len >= 21,got %v", len(f.Data))
+		return nil, fmt.Errorf("frame data error: data expect len >= 21,got %v", len(data))
 	}
 
 	if data[0] != FaultHeader[0] ||
@@ -184,7 +218,7 @@ func (f *Frame) NewFault() (*Fault, error) {
 // 规约 4.6.3
 func (f *Frame) NewFaultAck(fault *Fault) *Frame {
 	ackFrame := f.Copy()
-	f.Ctrl = ServerCtrl
+	f.Ctrl = ServerCtrl3
 
 	ackFrame.Data = make([]byte, 5)
 
@@ -210,4 +244,70 @@ func (f *Frame) NewFaultAck(fault *Fault) *Frame {
 	)
 
 	return ackFrame
+}
+
+// NewTelemetering
+// 主站发送数据
+// 规约 4.1.1
+func NewTelemetering(address ID) *Frame {
+	f := &Frame{
+		Ctrl:     ServerCtrlA,
+		Address:  address,
+		Function: TelemeteringFun,
+	}
+
+	f.Data = []byte{0xFF, 0x60, 0x00, 0x00, 0x00, 0x01, 0x00, 0x20}
+
+	return f
+}
+
+// NewTelemeteringAck
+// 终端回复数据
+// 规约 4.1.2
+func (f *Frame) NewTelemeteringAck() (*TelemeteringAck, error) {
+
+	if f.Ctrl != DeviceCtrl88 {
+		return nil, fmt.Errorf("frame ctrl error: ctrl expect 0x%x,got 0x%x", DeviceCtrl88, f.Ctrl)
+	}
+
+	if f.Function != TelemeteringFun {
+		return nil, fmt.Errorf("frame function error: function expect 0x%x,got 0x%x", TelemeteringFun, f.Function)
+	}
+
+	data := f.Data
+
+	if len(data) < 25 {
+		return nil, fmt.Errorf("frame data error: data expect len >= 25,got %v", len(data))
+	}
+
+	if data[1] != TelemeteringAckHeader[0] ||
+		data[2] != TelemeteringAckHeader[1] ||
+		data[3] != TelemeteringAckHeader[2] ||
+		data[4] != TelemeteringAckHeader[3] ||
+		data[5] != TelemeteringAckHeader[4] ||
+		data[6] != TelemeteringAckHeader[5] ||
+		data[7] != TelemeteringAckHeader[6] {
+		return nil, errors.New("frame data error:  packet format error")
+	}
+
+	a := &TelemeteringAck{Num: data[0]}
+
+	actualData := data[8:]
+
+	switches := []*Switch{
+		{
+			Name:  "Switch",
+			Index: 0,
+			Value: actualData[0],
+		},
+		{
+			Name:  "LeakageProtect",
+			Index: 25,
+			Value: actualData[25],
+		},
+	}
+
+	a.Switches = switches
+
+	return a, nil
 }

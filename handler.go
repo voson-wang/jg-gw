@@ -3,7 +3,6 @@ package main
 import (
 	"github.com/rs/zerolog/log"
 	"ricn-smart/ricn-jg-gw/modbus"
-	"strings"
 	"time"
 )
 
@@ -42,12 +41,32 @@ func handler(conn *modbus.Conn) {
 
 			sn := heartBeat.ID.String()
 
-			var node []string
-			for _, id := range heartBeat.NodeID {
-				node = append(node, id.String())
-			}
+			log.Debug().Str("sn", sn).Str("node", modbus.NodesString(heartBeat.NodeIDs)).Msg("心跳包")
 
-			log.Debug().Str("sn", sn).Str("node", strings.Join(node, ",")).Msg("心跳包")
+			for _, id := range heartBeat.NodeIDs {
+				// 遥信读取开关状态
+				telemeterFrame := modbus.NewTelemetering(id)
+
+				if err := conn.Write(telemeterFrame, timeout); err != nil {
+					log.Error().Err(err).Str("remote", conn.Addr().String()).Msg("")
+					return
+				}
+
+				telemeterAckFrame, err := conn.Read(500, timeout)
+				if err != nil {
+					log.Error().Err(err).Str("remote", conn.Addr().String()).Msg("")
+					return
+				}
+
+				telemeterAck, err := telemeterAckFrame.NewTelemeteringAck()
+				if err != nil {
+					log.Error().Err(err).Str("remote", conn.Addr().String()).Msg("")
+					return
+				}
+
+				log.Debug().Uint8(telemeterAck.Switches[0].Name, telemeterAck.Switches[0].Value).
+					Uint8(telemeterAck.Switches[1].Name, telemeterAck.Switches[1].Value).Msg("遥信")
+			}
 
 		case modbus.PowerDownFun:
 
