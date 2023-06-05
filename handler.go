@@ -12,38 +12,52 @@ const (
 )
 
 func handler(conn *modbus.Conn) {
-	f1, err := conn.Read(size, timeout)
-	if err != nil {
-		log.Error().Err(err).Str("remote", conn.Addr().String()).Msg("")
-		return
-	}
 
-	switch f1.Function {
-	case modbus.RegisterFun:
-
-		login, err := f1.NewLogin()
+	for {
+		f, err := conn.Read(size, timeout)
 		if err != nil {
 			log.Error().Err(err).Str("remote", conn.Addr().String()).Msg("")
 			return
 		}
 
-		sn := login.ID.String()
+		switch f.Function {
+		case modbus.RegisterFun:
+			login, err := f.NewLogin()
+			if err != nil {
+				log.Error().Err(err).Str("remote", conn.Addr().String()).Msg("")
+				return
+			}
 
-		log.Info().Str("sn", sn).Msg("设备上线")
+			sn := login.ID.String()
 
-	case modbus.PowerDownFun:
+			log.Info().Str("sn", sn).Msg("设备上线")
 
-	case modbus.FaultFun:
-		fault, err := f1.NewFault()
-		if err != nil {
-			log.Error().Err(err).Str("remote", conn.Addr().String()).Msg("")
-			return
-		}
-		faultAckFrame := f1.NewFaultAck(fault)
-		// 回复确认
-		if err := conn.Write(faultAckFrame, timeout); err != nil {
-			log.Error().Err(err).Str("remote", conn.Addr().String()).Msg("")
-			return
+		case modbus.HeartBeatFun:
+			heartBeat, err := f.NewHeartBeat()
+			if err != nil {
+				log.Error().Err(err).Str("remote", conn.Addr().String()).Msg("")
+				return
+			}
+
+			for _, id := range heartBeat.NodeID {
+				log.Debug().Str("NodeID", id.String()).Msg("节点")
+			}
+
+		case modbus.PowerDownFun:
+
+		case modbus.FaultFun:
+			fault, err := f.NewFault()
+			if err != nil {
+				log.Error().Err(err).Str("remote", conn.Addr().String()).Msg("")
+				return
+			}
+			log.Debug().Msg("设备上报了故障")
+			faultAckFrame := f.NewFaultAck(fault)
+			// 回复确认
+			if err := conn.Write(faultAckFrame, timeout); err != nil {
+				log.Error().Err(err).Str("remote", conn.Addr().String()).Msg("")
+				return
+			}
 		}
 	}
 

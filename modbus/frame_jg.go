@@ -77,28 +77,28 @@ func NewFrame(packet []byte) (*Frame, error) {
 	return frame, nil
 }
 
-func (frame *Frame) Copy() *Frame {
-	f := *frame
-	return &f
+func (f *Frame) Copy() *Frame {
+	frame := *f
+	return &frame
 }
 
 // Bytes returns the MODBUS byte stream based on the Frame fields
-func (frame *Frame) Bytes() []byte {
+func (f *Frame) Bytes() []byte {
 	b := make([]byte, 12)
 
 	// 添加定界符
 	b[0] = startFlag
 	b[3] = startFlag
-	b[4] = byte(frame.Ctrl)
-	b[5] = frame.Address[0]
-	b[6] = frame.Address[1]
-	b[7] = frame.Address[2]
-	b[8] = frame.Address[3]
-	b[9] = frame.Address[4]
-	b[10] = frame.Address[5]
-	b[11] = byte(frame.Function)
+	b[4] = byte(f.Ctrl)
+	b[5] = f.Address[0]
+	b[6] = f.Address[1]
+	b[7] = f.Address[2]
+	b[8] = f.Address[3]
+	b[9] = f.Address[4]
+	b[10] = f.Address[5]
+	b[11] = byte(f.Function)
 
-	b = append(b, frame.Data...)
+	b = append(b, f.Data...)
 
 	// Calculate the CheckSum.
 	cs := crcModbus(b[4:])
@@ -111,16 +111,16 @@ func (frame *Frame) Bytes() []byte {
 }
 
 // GetFunction returns the Modbus function code.
-func (frame *Frame) GetFunction() Function {
-	return frame.Function
+func (f *Frame) GetFunction() Function {
+	return f.Function
 }
 
 // GetData returns the Frame Data byte field.
-func (frame *Frame) GetData() []byte {
-	return frame.Data
+func (f *Frame) GetData() []byte {
+	return f.Data
 }
 
 // SetData sets the Frame Data byte field and updates the frame length accordingly.
-func (frame *Frame) SetData(data []byte) {
-	frame.Data = data
+func (f *Frame) SetData(data []byte) {
+	f.Data = data
 }

@@ -8,6 +8,7 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 )
 
@@ -41,10 +42,15 @@ type (
 		TelemeteringTimeMark TimeMark // 故障时标
 	}
 
-	ID [6]byte // 集中器ID（网关ID）
+	ID [6]byte // 集中器ID（网关ID）、微端通讯地址
 
 	Login struct {
 		ID ID
+	}
+
+	HeartBeat struct {
+		ID     ID
+		NodeID []ID
 	}
 )
 
@@ -74,11 +80,11 @@ var (
 )
 
 func (i *ID) String() string {
-	var ss string
+	var s string
 	for _, v := range i {
-		ss += fmt.Sprintf("%02X", v)
+		s += fmt.Sprintf("%02X", v)
 	}
-	return ss
+	return strings.TrimLeft(s, "0")
 }
 
 // Time
@@ -94,27 +100,50 @@ func (t *TimeMark) Time() time.Time {
 // NewLogin
 // 注册数据
 // 扩展规约 4.1
-func (frame *Frame) NewLogin() (*Login, error) {
+func (f *Frame) NewLogin() (*Login, error) {
 
-	data := frame.Data
+	data := f.Data
 
-	if len(data) != 8 {
-		return nil, fmt.Errorf("frame data error: data expect len 8,got %v", len(frame.Data))
+	if len(data) < 8 {
+		return nil, fmt.Errorf("frame data error: data expect len >8,got %v", len(f.Data))
 	}
 
 	l := &Login{ID: [6]byte(data[:6])}
 	return l, nil
 }
 
+// NewHeartBeat
+// 心跳
+func (f *Frame) NewHeartBeat() (*HeartBeat, error) {
+	data := f.Data
+
+	if len(data) < 8 {
+		return nil, fmt.Errorf("frame data error: data expect len >8,got %v", len(f.Data))
+	}
+
+	h := &HeartBeat{
+		ID: [6]byte(data[:6]),
+	}
+
+	var nodeID []ID
+
+	for i := 6; i+6 <= len(data)-1; i = i + 6 {
+		nodeID = append(nodeID, ID(data[i:i+6]))
+	}
+
+	h.NodeID = nodeID
+	return h, nil
+}
+
 // NewFault
 // 终端回复故障或上报故障
 // 规约 4.6.2
-func (frame *Frame) NewFault() (*Fault, error) {
+func (f *Frame) NewFault() (*Fault, error) {
 
-	data := frame.Data
+	data := f.Data
 
 	if len(data) < 21 {
-		return nil, fmt.Errorf("frame data error: data expect len >= 21,got %v", len(frame.Data))
+		return nil, fmt.Errorf("frame data error: data expect len >= 21,got %v", len(f.Data))
 	}
 
 	if data[0] != FaultHeader[0] ||
@@ -137,7 +166,7 @@ func (frame *Frame) NewFault() (*Fault, error) {
 
 	var teleindicationData []TeleindicationData
 
-	for i := 20; i+4 <= len(data[20:])-1; i++ {
+	for i := 20; i+4 <= len(data)-1; i = i + 4 {
 		teleindicationData = append(teleindicationData, TeleindicationData{
 			TeleindicationDit:   [2]byte(data[i : i+2]),
 			TeleindicationValue: [2]byte(data[i+2 : i+4]),
@@ -153,9 +182,9 @@ func (frame *Frame) NewFault() (*Fault, error) {
 // 终端回复故障或上报故障
 // 主站回复确认
 // 规约 4.6.3
-func (frame *Frame) NewFaultAck(fault *Fault) *Frame {
-	ackFrame := frame.Copy()
-	frame.Ctrl = ServerCtrl
+func (f *Frame) NewFaultAck(fault *Fault) *Frame {
+	ackFrame := f.Copy()
+	f.Ctrl = ServerCtrl
 
 	ackFrame.Data = make([]byte, 5)
 
