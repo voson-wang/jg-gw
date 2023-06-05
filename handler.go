@@ -3,6 +3,7 @@ package main
 import (
 	"github.com/rs/zerolog/log"
 	"ricn-smart/ricn-jg-gw/modbus"
+	"strings"
 	"time"
 )
 
@@ -30,7 +31,7 @@ func handler(conn *modbus.Conn) {
 
 			sn := login.ID.String()
 
-			log.Info().Str("sn", sn).Msg("设备上线")
+			log.Info().Str("sn", sn).Msg("上线")
 
 		case modbus.HeartBeatFun:
 			heartBeat, err := f.NewHeartBeat()
@@ -39,9 +40,14 @@ func handler(conn *modbus.Conn) {
 				return
 			}
 
+			sn := heartBeat.ID.String()
+
+			var node []string
 			for _, id := range heartBeat.NodeID {
-				log.Debug().Str("NodeID", id.String()).Msg("节点")
+				node = append(node, id.String())
 			}
+
+			log.Debug().Str("sn", sn).Str("node", strings.Join(node, ",")).Msg("心跳包")
 
 		case modbus.PowerDownFun:
 
@@ -51,7 +57,7 @@ func handler(conn *modbus.Conn) {
 				log.Error().Err(err).Str("remote", conn.Addr().String()).Msg("")
 				return
 			}
-			log.Debug().Msg("设备上报了故障")
+			log.Debug().Time("time", fault.TelemeteringTimeMark.Time()).Msg("故障")
 			faultAckFrame := f.NewFaultAck(fault)
 			// 回复确认
 			if err := conn.Write(faultAckFrame, timeout); err != nil {
