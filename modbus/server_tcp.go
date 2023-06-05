@@ -8,8 +8,6 @@ import (
 )
 
 type (
-	ErrorLevel uint8
-
 	Conn struct {
 		rwc    net.Conn
 		server *Server
@@ -17,17 +15,9 @@ type (
 	}
 
 	Server struct {
-		address  string
-		serve    func(conn *Conn)
-		logLevel ErrorLevel
+		address string
+		serve   func(conn *Conn)
 	}
-)
-
-const (
-	Silent ErrorLevel = iota
-	INFO
-	ERROR
-	DEBUG
 )
 
 func (c *Conn) Read(size int, timeout time.Duration) (*Frame, error) {
@@ -66,8 +56,7 @@ func (c *Conn) Addr() net.Addr {
 
 func NewServer(address string) *Server {
 	return &Server{
-		address:  address,
-		logLevel: ERROR,
+		address: address,
 	}
 }
 
@@ -75,13 +64,9 @@ func (s *Server) SetServe(serve func(conn *Conn)) {
 	s.serve = serve
 }
 
-func (s *Server) SetLogLevel(logLevel ErrorLevel) {
-	s.logLevel = logLevel
-}
-
 func (s *Server) ListenAndServe() error {
 	if s.serve == nil {
-		return errors.New("use SetServe of server first")
+		return errors.New("server error: use SetServe of server first")
 	}
 
 	listener, err := net.Listen("tcp", s.address)

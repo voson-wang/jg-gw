@@ -17,21 +17,25 @@ import (
 校验和CS：1个字节，是控制字、终端地址、命令码、用户数据的字节的八位位组算术和，不考虑溢出位，即：CS＝（控制字+终端地址+命令码+用户数据）MOD 256。
 
 注册包、心跳包
+注册包可能会出现1～3次，随后可能时故障主动上传和遥信主动上传，故障需要主站回复确认
 68 10 10 68 80 00 00 00 00 00 00（固定格式） 8b（注册帧控制字）（收到的这里是8d的是心跳包） 18 21 06 23 00 96 （集中器ID）71 00（数据序号，上电初始值为0） 74（cs校验和） 16
 */
 
-// Frame Address: 开关终端地址地址	 Function：命令代码  Data：数据
+type Ctrl byte
+
+type Function byte
+
 type Frame struct {
-	Size     byte
-	Ctrl     byte
-	Address  [6]byte
-	Function byte
-	Data     []byte
-	CS       byte
+	Size     byte     // 长度L
+	Ctrl     Ctrl     // 控制
+	Address  [6]byte  // 终端地址
+	Function Function // 命令码
+	Data     []byte   // 用户数据
+	CS       byte     // 校验CS
 }
 
-const flag byte = 0x68
-const ender byte = 0x16
+const startFlag byte = 0x68 // 起始字符
+const endFlag byte = 0x16   // 终止符号
 
 // NewFrame converts a packet to a JG frame.
 func NewFrame(packet []byte) (*Frame, error) {
@@ -39,18 +43,18 @@ func NewFrame(packet []byte) (*Frame, error) {
 	pLen := len(packet)
 
 	if pLen < 14 {
-		return nil, fmt.Errorf("[ModBus]: frame error: packet lenght expect >=14, got %v", pLen)
+		return nil, fmt.Errorf("frame error: packet lenght expect >=14, got %v", pLen)
 	}
 
-	if packet[0] != flag || packet[3] != flag || packet[pLen-1] != ender {
-		return nil, fmt.Errorf("[ModBus]: frame error: packet format error")
+	if packet[0] != startFlag || packet[3] != startFlag || packet[pLen-1] != endFlag {
+		return nil, fmt.Errorf("frame error: packet format error")
 	}
 
 	// 获取长度L
 	l := len(packet[4 : pLen-2])
 
 	if byte(l) != packet[1] {
-		return nil, fmt.Errorf("[ModBus]: frame error: packet lenght error")
+		return nil, fmt.Errorf("frame error: packet lenght error")
 	}
 
 	// 校验和
@@ -58,14 +62,14 @@ func NewFrame(packet []byte) (*Frame, error) {
 	csCalc := crcModbus(packet[4 : pLen-2])
 
 	if csExpect != csCalc {
-		return nil, fmt.Errorf("[ModBus]: frame error: CheckSum (expected 0x%x, got 0x%x)", csExpect, csCalc)
+		return nil, fmt.Errorf("frame error: CheckSum (expected 0x%x, got 0x%x)", csExpect, csCalc)
 	}
 
 	frame := &Frame{
 		Size:     packet[1],
-		Ctrl:     packet[4],
+		Ctrl:     Ctrl(packet[4]),
 		Address:  [6]byte(packet[5:11]),
-		Function: packet[11],
+		Function: Function(packet[11]),
 		Data:     packet[12 : pLen-2],
 		CS:       csExpect,
 	}
@@ -83,16 +87,16 @@ func (frame *Frame) Bytes() []byte {
 	b := make([]byte, 12)
 
 	// 添加定界符
-	b[0] = flag
-	b[3] = flag
-	b[4] = frame.Ctrl
+	b[0] = startFlag
+	b[3] = startFlag
+	b[4] = byte(frame.Ctrl)
 	b[5] = frame.Address[0]
 	b[6] = frame.Address[1]
 	b[7] = frame.Address[2]
 	b[8] = frame.Address[3]
 	b[9] = frame.Address[4]
 	b[10] = frame.Address[5]
-	b[11] = frame.Function
+	b[11] = byte(frame.Function)
 
 	b = append(b, frame.Data...)
 
@@ -100,14 +104,14 @@ func (frame *Frame) Bytes() []byte {
 	cs := crcModbus(b[4:])
 
 	b = append(b, cs)
-	b = append(b, ender)
+	b = append(b, endFlag)
 	b[1] = byte(len(b) - 6)
 	b[2] = b[1]
 	return b
 }
 
 // GetFunction returns the Modbus function code.
-func (frame *Frame) GetFunction() uint8 {
+func (frame *Frame) GetFunction() Function {
 	return frame.Function
 }
 

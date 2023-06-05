@@ -44,10 +44,6 @@ func main() {
 
 	server := modbus.NewServer(fmt.Sprintf(":%v", port))
 
-	if debug {
-		server.SetLogLevel(modbus.DEBUG)
-	}
-
 	server.SetServe(handler)
 
 	go func() {
