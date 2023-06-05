@@ -2,7 +2,6 @@ package modbus
 
 import (
 	"errors"
-	"log"
 	"net"
 	"sync"
 	"time"
@@ -43,10 +42,6 @@ func (c *Conn) Read(size int, timeout time.Duration) (*Frame, error) {
 		return nil, err
 	}
 
-	if c.server.logLevel == DEBUG {
-		log.Printf("[ModBus Server] DBG %v read: % x\n", c.rwc.RemoteAddr(), buf[:l])
-	}
-
 	return NewFrame(buf[:l])
 }
 
@@ -57,15 +52,8 @@ func (c *Conn) Write(frame *Frame, timeout time.Duration) error {
 	defer c.rwc.SetWriteDeadline(time.Time{})
 
 	_, err := c.rwc.Write(frame.Bytes())
-	if err != nil {
-		return err
-	}
 
-	if c.server.logLevel == DEBUG {
-		log.Printf("[ModBus Server] DBG %v write: % x\n", c.rwc.RemoteAddr(), frame.Bytes())
-	}
-
-	return nil
+	return err
 }
 
 func (c *Conn) Close() error {
@@ -106,10 +94,6 @@ func (s *Server) ListenAndServe() error {
 		rwc, err := listener.Accept()
 		if err != nil {
 			return err
-		}
-
-		if s.logLevel == DEBUG {
-			log.Printf("[ModBus Server] DBG %v device online. \n", rwc.RemoteAddr())
 		}
 
 		go func() {

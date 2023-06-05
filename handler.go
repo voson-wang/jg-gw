@@ -9,7 +9,7 @@ import (
 )
 
 const (
-	timeout = 10 * time.Second
+	timeout = 120 * time.Second
 	size    = 500 // 设定读取数据的最大长度，必须大于设备发送的数据长度
 )
 
@@ -30,6 +30,7 @@ func handler(conn *modbus.Conn) {
 	}
 
 	if registerFrame.Function == RegisterCmd {
+
 		values := make(map[string]any)
 
 		connReg.Decode(registerFrame.Data, values)
@@ -48,11 +49,6 @@ func handler(conn *modbus.Conn) {
 
 		log.Info().Str("sn", sn).Str("remote", conn.Addr().String()).Msg("设备上线")
 
-		if err := conn.Write(registerFrame, timeout); err != nil {
-			log.Error().Err(err).Msg("")
-			return
-		}
-
 		heartBeatFrame, err := conn.Read(size, timeout)
 		if err != nil {
 			log.Error().Err(err).Str("remote", conn.Addr().String()).Msg("")
@@ -65,6 +61,8 @@ func handler(conn *modbus.Conn) {
 				log.Error().Err(err).Msg("")
 				return
 			}
+
+			log.Debug().Msg("收到心跳包")
 
 			l := len(heartBeatFrame.Data)
 			num := l / 6
@@ -80,10 +78,10 @@ func handler(conn *modbus.Conn) {
 			}
 		}
 
-		log.Warn().Str("msg", fmt.Sprintf("% x", heartBeatFrame.Bytes())).Hex("Function", []byte{registerFrame.Function}).Str("remote", conn.Addr().String()).Msg("收到了注册包，但是没有心跳包")
+		log.Warn().Str("msg", fmt.Sprintf("% x", registerFrame.Bytes())).Hex("Ctrl", []byte{registerFrame.Ctrl}).Hex("Function", []byte{registerFrame.Function}).Str("sn", sn).Msg("收到了注册包，但是没有心跳包")
 
 		return
 	}
 
-	log.Warn().Hex("Function", []byte{registerFrame.Function}).Str("msg", fmt.Sprintf("% x", registerFrame.Bytes())).Str("remote", conn.Addr().String()).Msg("有新的链接，但是没有注册包")
+	log.Warn().Hex("Function", []byte{registerFrame.Function}).Hex("Ctrl", []byte{registerFrame.Ctrl}).Str("msg", fmt.Sprintf("% x", registerFrame.Bytes())).Str("remote", conn.Addr().String()).Msg("有新的链接，但是没有注册包")
 }

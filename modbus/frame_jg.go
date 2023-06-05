@@ -80,7 +80,7 @@ func (frame *Frame) Copy() *Frame {
 
 // Bytes returns the MODBUS byte stream based on the Frame fields
 func (frame *Frame) Bytes() []byte {
-	b := make([]byte, 11)
+	b := make([]byte, 12)
 
 	// 添加定界符
 	b[0] = flag
