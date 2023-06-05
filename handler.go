@@ -7,7 +7,7 @@ import (
 )
 
 const (
-	timeout = 120 * time.Second
+	timeout = 150 * time.Second
 	size    = 500 // 设定读取数据的最大长度，必须大于设备发送的数据长度
 )
 
@@ -39,6 +39,12 @@ func handler(conn *modbus.Conn) {
 				return
 			}
 
+			// 扩展规约 6.1 原样回复给集中器
+			if err := conn.Write(f, timeout); err != nil {
+				log.Error().Err(err).Str("remote", conn.Addr().String()).Msg("")
+				return
+			}
+
 			sn := heartBeat.ID.String()
 
 			log.Debug().Str("sn", sn).Str("node", modbus.NodesString(heartBeat.NodeIDs)).Msg("心跳包")
@@ -65,11 +71,11 @@ func handler(conn *modbus.Conn) {
 				}
 
 				log.Debug().Uint8(telemeterAck.Switches[0].Name, telemeterAck.Switches[0].Value).
-					Uint8(telemeterAck.Switches[1].Name, telemeterAck.Switches[1].Value).Msg("遥信")
+					Uint8(telemeterAck.Switches[1].Name, telemeterAck.Switches[1].Value).Str("node", id.String()).Msg("遥信")
 			}
 
 		case modbus.PowerDownFun:
-
+			log.Debug().Msg("掉电")
 		case modbus.FaultFun:
 			fault, err := f.NewFault()
 			if err != nil {
