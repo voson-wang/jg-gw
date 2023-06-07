@@ -1,4 +1,4 @@
-module ricn-smart/ricn-jg-gw
+module ricn-smart/jg-gw
 
 go 1.20
 

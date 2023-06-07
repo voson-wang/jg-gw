@@ -3,8 +3,8 @@ package main
 import (
 	"fmt"
 	"github.com/rs/zerolog/log"
-	"ricn-smart/ricn-jg-gw/modbus"
-	"ricn-smart/ricn-jg-gw/mq"
+	"ricn-smart/jg-gw/modbus"
+	"ricn-smart/jg-gw/mq"
 	"time"
 )
 
@@ -90,7 +90,7 @@ func handler(conn *modbus.Conn) {
 					return
 				}
 
-				log.Debug().Interface("data", data).Str("node", id.String()).Msg("遥测")
+				log.Debug().Interface("data", data).Str("node", id.String()).Msg("开关和模拟量")
 
 				mq.Publish(ProjectName+"/"+sn+"/"+id.String()+"/property", mq.AtMostOnce, false, data)
 			}

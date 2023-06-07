@@ -5,10 +5,10 @@ import (
 	"github.com/rs/zerolog/log"
 	"os"
 	"os/signal"
-	logger "ricn-smart/ricn-jg-gw/log"
-	"ricn-smart/ricn-jg-gw/modbus"
-	"ricn-smart/ricn-jg-gw/mq"
-	"ricn-smart/ricn-jg-gw/util"
+	logger "ricn-smart/jg-gw/log"
+	"ricn-smart/jg-gw/modbus"
+	"ricn-smart/jg-gw/mq"
+	"ricn-smart/jg-gw/util"
 	"syscall"
 )
 
