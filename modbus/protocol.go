@@ -289,20 +289,20 @@ func NewTeleindication(address ID) *Frame {
 // NewTelemeteringAck
 // 终端回复的遥信数据
 // 规约 4.1.2
-func (f *Frame) NewTelemeteringAck() (map[string]any, error) {
+func (f *Frame) NewTelemeteringAck(values map[string]any) error {
 
 	if f.Ctrl != DeviceCtrl88 {
-		return nil, fmt.Errorf("frame ctrl error: ctrl expect 0x%X,got 0x%X", DeviceCtrl88, f.Ctrl)
+		return fmt.Errorf("frame ctrl error: ctrl expect 0x%X,got 0x%X", DeviceCtrl88, f.Ctrl)
 	}
 
 	if f.Function != TeleFun {
-		return nil, fmt.Errorf("frame function error: function expect 0x%X,got 0x%X", TeleFun, f.Function)
+		return fmt.Errorf("frame function error: function expect 0x%X,got 0x%X", TeleFun, f.Function)
 	}
 
 	data := f.Data
 
 	if len(data) < 25 {
-		return nil, fmt.Errorf("frame data error: data expect len >= 25,got %v", len(data))
+		return fmt.Errorf("frame data error: data expect len >= 25,got %v", len(data))
 	}
 
 	if data[0] != TelemeteringAckHeader[0] ||
@@ -313,15 +313,15 @@ func (f *Frame) NewTelemeteringAck() (map[string]any, error) {
 		data[5] != TelemeteringAckHeader[5] ||
 		data[6] != TelemeteringAckHeader[6] ||
 		data[7] != TelemeteringAckHeader[7] {
-		return nil, errors.New("frame data error:  packet format error")
+		return errors.New("frame data error:  packet format error")
 	}
 
 	actualData := data[8:]
 
-	return map[string]any{
-		"Switch":         actualData[0],
-		"LeakageProtect": actualData[25],
-	}, nil
+	values["Switch"] = actualData[0]
+	values["LeakageProtect"] = actualData[25]
+
+	return nil
 }
 
 // AnalogQuantity 模拟量
@@ -408,13 +408,13 @@ var analogQuantities = []*AnalogQuantity{
 // NewTeleindicationAck
 // 终端回复的遥测数据
 // 规约 4.2.2
-func (f *Frame) NewTeleindicationAck() (map[string]any, error) {
+func (f *Frame) NewTeleindicationAck(values map[string]any) error {
 	if f.Ctrl != DeviceCtrl88 {
-		return nil, fmt.Errorf("frame ctrl error: ctrl expect 0x%X,got 0x%X", DeviceCtrl88, f.Ctrl)
+		return fmt.Errorf("frame ctrl error: ctrl expect 0x%X,got 0x%X", DeviceCtrl88, f.Ctrl)
 	}
 
 	if f.Function != TeleFun {
-		return nil, fmt.Errorf("frame function error: function expect 0x%X,got 0x%X", TeleFun, f.Function)
+		return fmt.Errorf("frame function error: function expect 0x%X,got 0x%X", TeleFun, f.Function)
 	}
 
 	data := f.Data
@@ -427,16 +427,14 @@ func (f *Frame) NewTeleindicationAck() (map[string]any, error) {
 		data[5] != TeleindicationAckHeader[5] ||
 		data[6] != TeleindicationAckHeader[6] ||
 		data[7] != TeleindicationAckHeader[7] {
-		return nil, errors.New("frame data error:  packet format error")
+		return errors.New("frame data error:  packet format error")
 	}
 
 	actualData := data[8:]
 
-	m := make(map[string]any)
-
 	for _, a := range analogQuantities {
-		m[a.Name] = decimal.NewFromInt(int64(binary.LittleEndian.Uint16(actualData[(a.Num-1)*2 : a.Num*2]))).Mul(decimal.NewFromFloat(a.Coefficient))
+		values[a.Name] = decimal.NewFromInt(int64(binary.LittleEndian.Uint16(actualData[(a.Num-1)*2 : a.Num*2]))).Mul(decimal.NewFromFloat(a.Coefficient))
 	}
 
-	return m, nil
+	return nil
 }

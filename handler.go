@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/rs/zerolog/log"
 	"ricn-smart/ricn-jg-gw/modbus"
+	"ricn-smart/ricn-jg-gw/mq"
 	"time"
 )
 
@@ -32,6 +33,8 @@ func handler(conn *modbus.Conn) {
 			sn := login.ID.String()
 
 			log.Info().Str("sn", sn).Msg("上线")
+
+			mq.Publish(ProjectName+"/"+sn+"/event", mq.ExactlyOnce, false, map[string]any{"Identifier": "ONLINE"})
 
 		case modbus.HeartBeatFun:
 			heartBeat, err := f.NewHeartBeat()
@@ -63,13 +66,12 @@ func handler(conn *modbus.Conn) {
 					return
 				}
 
-				telemeterAck, err := telemeterAckFrame.NewTelemeteringAck()
-				if err != nil {
+				data := make(map[string]any)
+
+				if err := telemeterAckFrame.NewTelemeteringAck(data); err != nil {
 					log.Error().Err(err).Str("remote", conn.Addr().String()).Msg("")
 					return
 				}
-
-				log.Debug().Interface("开关量", telemeterAck).Str("node", id.String()).Msg("遥信")
 
 				// 遥测读取电压等数据
 				if err := conn.Write(modbus.NewTeleindication(id), timeout); err != nil {
@@ -83,14 +85,14 @@ func handler(conn *modbus.Conn) {
 					return
 				}
 
-				teleindicationAck, err := teleindicationAckFrame.NewTeleindicationAck()
-				if err != nil {
+				if err := teleindicationAckFrame.NewTeleindicationAck(data); err != nil {
 					log.Error().Err(err).Str("remote", conn.Addr().String()).Msg("")
 					return
 				}
 
-				log.Debug().Interface("模拟量", teleindicationAck).Str("node", id.String()).Msg("遥测")
+				log.Debug().Interface("data", data).Str("node", id.String()).Msg("遥测")
 
+				mq.Publish(ProjectName+"/"+sn+"/"+id.String()+"/property", mq.AtMostOnce, false, data)
 			}
 
 		case modbus.PowerDownFun:
