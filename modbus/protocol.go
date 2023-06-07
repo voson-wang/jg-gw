@@ -8,6 +8,7 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
+	"github.com/shopspring/decimal"
 	"strings"
 	"time"
 )
@@ -52,21 +53,6 @@ type (
 		ID      ID
 		NodeIDs []ID
 	}
-
-	Switch struct {
-		Name  string // 名称
-		Index int    // 在数据中的位置，从0开始
-
-		// 第一个字节代表开关状态：01为合闸状态，00为分闸状态；
-		// 第二个字节代表死锁状态：01为开关死锁，00为解除死锁；
-		// 其他字节同上，1为故障0为正常，长度都为 1字节，字节含义可以查看参数地址分配表中开关量来对照
-		Value byte
-	}
-
-	TelemeteringAck struct {
-		Num      byte // 信息个数
-		Switches []*Switch
-	}
 )
 
 // 终端、集中器控制
@@ -86,17 +72,22 @@ const (
 
 // 命令码
 const (
-	FaultFun        Function = 0x2A
-	TelemeteringFun Function = 0x64 // 遥信
-	RegisterFun     Function = 0x8B
-	PowerDownFun    Function = 0x8C
-	HeartBeatFun    Function = 0x8D
+	FaultFun     Function = 0x2A
+	TeleFun      Function = 0x64 // 遥信、遥测
+	RegisterFun  Function = 0x8B
+	PowerDownFun Function = 0x8C
+	HeartBeatFun Function = 0x8D
 )
 
+// Frame.Data的数据头
+// 遥信、遥测用的是相同的控制和命名码，所不同的是在Header
 var (
-	FaultHeader           = [5]byte{0x00, 0x03, 0x00, 0x00, 0x00}
-	FaultAckHeader        = [5]byte{0x00, 0x03, 0x01, 0x00, 0x00}
-	TelemeteringAckHeader = [7]byte{0x07, 0x00, 0x00, 0x00, 0x01, 0x00, 0x20}
+	FaultHeader             = [5]byte{0x00, 0x03, 0x00, 0x00, 0x00}
+	FaultAckHeader          = [5]byte{0x00, 0x03, 0x01, 0x00, 0x00}
+	TelemeteringHeader      = [8]byte{0x80, 0x06, 0x00, 0x00, 0x00, 0x01, 0x00, 0x20}
+	TelemeteringAckHeader   = [8]byte{0x80, 0x07, 0x00, 0x00, 0x00, 0x01, 0x00, 0x20}
+	TeleindicationHeader    = [8]byte{0x80, 0x06, 0x00, 0x00, 0x00, 0x01, 0x40, 0x20}
+	TeleindicationAckHeader = [8]byte{0x80, 0x07, 0x00, 0x00, 0x00, 0x01, 0x40, 0x20}
 )
 
 func (i ID) String() string {
@@ -249,31 +240,62 @@ func (f *Frame) NewFaultAck(fault *Fault) *Frame {
 }
 
 // NewTelemetering
-// 主站发送数据
+// 创建一个主站发送的遥信数据
 // 规约 4.1.1
 func NewTelemetering(address ID) *Frame {
 	f := &Frame{
 		Ctrl:     ServerCtrlA,
 		Address:  address,
-		Function: TelemeteringFun,
+		Function: TeleFun,
 	}
 
-	f.Data = []byte{0x80, 0x06, 0x00, 0x00, 0x00, 0x01, 0x00, 0x20}
+	f.Data = make([]byte, 8)
+	f.Data[0] = TelemeteringHeader[0]
+	f.Data[1] = TelemeteringHeader[1]
+	f.Data[2] = TelemeteringHeader[2]
+	f.Data[3] = TelemeteringHeader[3]
+	f.Data[4] = TelemeteringHeader[4]
+	f.Data[5] = TelemeteringHeader[5]
+	f.Data[6] = TelemeteringHeader[6]
+	f.Data[7] = TelemeteringHeader[7]
+
+	return f
+}
+
+// NewTeleindication
+// 创建一个主站发送的遥测数据
+// 规约 4.2.1
+func NewTeleindication(address ID) *Frame {
+	f := &Frame{
+		Ctrl:     ServerCtrlA,
+		Address:  address,
+		Function: TeleFun,
+	}
+
+	f.Data = make([]byte, 8)
+	f.Data[0] = TeleindicationHeader[0]
+	f.Data[1] = TeleindicationHeader[1]
+	f.Data[2] = TeleindicationHeader[2]
+	f.Data[3] = TeleindicationHeader[3]
+	f.Data[4] = TeleindicationHeader[4]
+	f.Data[5] = TeleindicationHeader[5]
+	f.Data[6] = TeleindicationHeader[6]
+	f.Data[7] = TeleindicationHeader[7]
 
 	return f
 }
 
 // NewTelemeteringAck
-// 终端回复数据
+// 终端回复的遥信数据
 // 规约 4.1.2
-func (f *Frame) NewTelemeteringAck() (*TelemeteringAck, error) {
+func (f *Frame) NewTelemeteringAck() (map[string]any, error) {
 
 	if f.Ctrl != DeviceCtrl88 {
 		return nil, fmt.Errorf("frame ctrl error: ctrl expect 0x%X,got 0x%X", DeviceCtrl88, f.Ctrl)
 	}
 
-	if f.Function != TelemeteringFun {
-		return nil, fmt.Errorf("frame function error: function expect 0x%X,got 0x%X", TelemeteringFun, f.Function)
+	if f.Function != TeleFun {
+		return nil, fmt.Errorf("frame function error: function expect 0x%X,got 0x%X", TeleFun, f.Function)
 	}
 
 	data := f.Data
@@ -282,34 +304,138 @@ func (f *Frame) NewTelemeteringAck() (*TelemeteringAck, error) {
 		return nil, fmt.Errorf("frame data error: data expect len >= 25,got %v", len(data))
 	}
 
-	if data[1] != TelemeteringAckHeader[0] ||
-		data[2] != TelemeteringAckHeader[1] ||
-		data[3] != TelemeteringAckHeader[2] ||
-		data[4] != TelemeteringAckHeader[3] ||
-		data[5] != TelemeteringAckHeader[4] ||
-		data[6] != TelemeteringAckHeader[5] ||
-		data[7] != TelemeteringAckHeader[6] {
+	if data[0] != TelemeteringAckHeader[0] ||
+		data[1] != TelemeteringAckHeader[1] ||
+		data[2] != TelemeteringAckHeader[2] ||
+		data[3] != TelemeteringAckHeader[3] ||
+		data[4] != TelemeteringAckHeader[4] ||
+		data[5] != TelemeteringAckHeader[5] ||
+		data[6] != TelemeteringAckHeader[6] ||
+		data[7] != TelemeteringAckHeader[7] {
 		return nil, errors.New("frame data error:  packet format error")
 	}
 
-	a := &TelemeteringAck{Num: data[0]}
+	actualData := data[8:]
+
+	return map[string]any{
+		"Switch":         actualData[0],
+		"LeakageProtect": actualData[25],
+	}, nil
+}
+
+// AnalogQuantity 模拟量
+// 参数地址分配（2020）_MCB_2021.08.132
+type AnalogQuantity struct {
+	Num         int // 序号，从1开始
+	Name        string
+	Coefficient float64 // 系数
+}
+
+var analogQuantities = []*AnalogQuantity{
+	{
+		Num:         4,
+		Name:        "Ua",
+		Coefficient: 0.1,
+	},
+	{
+		Num:         5,
+		Name:        "Ub",
+		Coefficient: 0.1,
+	},
+	{
+		Num:         6,
+		Name:        "Uc",
+		Coefficient: 0.1,
+	},
+	{
+		Num:         8,
+		Name:        "Ia",
+		Coefficient: 0.01,
+	},
+	{
+		Num:         9,
+		Name:        "Ib",
+		Coefficient: 0.01,
+	},
+	{
+		Num:         10,
+		Name:        "Ic",
+		Coefficient: 0.01,
+	},
+	{
+		Num:         11,
+		Name:        "Leakage",
+		Coefficient: 1,
+	},
+	{
+		Num:         12,
+		Name:        "P",
+		Coefficient: 0.01,
+	},
+	{
+		Num:         14,
+		Name:        "PF",
+		Coefficient: 0.01,
+	},
+	{
+		Num:         15,
+		Name:        "EPI", // 正向有功总和、总电量L
+		Coefficient: 0.01,
+	},
+	{
+		Num:         26,
+		Name:        "Ta",
+		Coefficient: 1,
+	},
+	{
+		Num:         27,
+		Name:        "Tb",
+		Coefficient: 1,
+	},
+	{
+		Num:         28,
+		Name:        "Tc",
+		Coefficient: 1,
+	},
+	{
+		Num:         29,
+		Name:        "TN",
+		Coefficient: 1,
+	},
+}
+
+// NewTeleindicationAck
+// 终端回复的遥测数据
+// 规约 4.2.2
+func (f *Frame) NewTeleindicationAck() (map[string]any, error) {
+	if f.Ctrl != DeviceCtrl88 {
+		return nil, fmt.Errorf("frame ctrl error: ctrl expect 0x%X,got 0x%X", DeviceCtrl88, f.Ctrl)
+	}
+
+	if f.Function != TeleFun {
+		return nil, fmt.Errorf("frame function error: function expect 0x%X,got 0x%X", TeleFun, f.Function)
+	}
+
+	data := f.Data
+
+	if data[0] != TeleindicationAckHeader[0] ||
+		data[1] != TeleindicationAckHeader[1] ||
+		data[2] != TeleindicationAckHeader[2] ||
+		data[3] != TeleindicationAckHeader[3] ||
+		data[4] != TeleindicationAckHeader[4] ||
+		data[5] != TeleindicationAckHeader[5] ||
+		data[6] != TeleindicationAckHeader[6] ||
+		data[7] != TeleindicationAckHeader[7] {
+		return nil, errors.New("frame data error:  packet format error")
+	}
 
 	actualData := data[8:]
 
-	switches := []*Switch{
-		{
-			Name:  "Switch",
-			Index: 0,
-			Value: actualData[0],
-		},
-		{
-			Name:  "LeakageProtect",
-			Index: 25,
-			Value: actualData[25],
-		},
+	m := make(map[string]any)
+
+	for _, a := range analogQuantities {
+		m[a.Name] = decimal.NewFromInt(int64(binary.LittleEndian.Uint16(actualData[(a.Num-1)*2 : a.Num*2]))).Mul(decimal.NewFromFloat(a.Coefficient))
 	}
 
-	a.Switches = switches
-
-	return a, nil
+	return m, nil
 }

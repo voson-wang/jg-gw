@@ -8,8 +8,8 @@ import (
 )
 
 const (
-	timeout = 60 * time.Second
-	size    = 300 // 设定读取数据的最大长度，必须大于设备发送的数据长度
+	timeout = 60 * time.Second // 据观察，京硅设备心跳间隔在60s以内
+	size    = 500              // 设定读取数据的最大长度，必须大于设备发送的数据长度
 )
 
 func handler(conn *modbus.Conn) {
@@ -52,14 +52,12 @@ func handler(conn *modbus.Conn) {
 
 			for _, id := range heartBeat.NodeIDs {
 				// 遥信读取开关状态
-				telemeterFrame := modbus.NewTelemetering(id)
-
-				if err := conn.Write(telemeterFrame, timeout); err != nil {
+				if err := conn.Write(modbus.NewTelemetering(id), timeout); err != nil {
 					log.Error().Err(err).Str("remote", conn.Addr().String()).Msg("")
 					return
 				}
 
-				telemeterAckFrame, err := conn.Read(500, timeout)
+				telemeterAckFrame, err := conn.Read(size, timeout)
 				if err != nil {
 					log.Error().Err(err).Str("remote", conn.Addr().String()).Msg("")
 					return
@@ -71,8 +69,28 @@ func handler(conn *modbus.Conn) {
 					return
 				}
 
-				log.Debug().Uint8(telemeterAck.Switches[0].Name, telemeterAck.Switches[0].Value).
-					Uint8(telemeterAck.Switches[1].Name, telemeterAck.Switches[1].Value).Str("node", id.String()).Msg("遥信")
+				log.Debug().Interface("开关量", telemeterAck).Str("node", id.String()).Msg("遥信")
+
+				// 遥测读取电压等数据
+				if err := conn.Write(modbus.NewTeleindication(id), timeout); err != nil {
+					log.Error().Err(err).Str("remote", conn.Addr().String()).Msg("")
+					return
+				}
+
+				teleindicationAckFrame, err := conn.Read(size, timeout)
+				if err != nil {
+					log.Error().Err(err).Str("remote", conn.Addr().String()).Msg("")
+					return
+				}
+
+				teleindicationAck, err := teleindicationAckFrame.NewTeleindicationAck()
+				if err != nil {
+					log.Error().Err(err).Str("remote", conn.Addr().String()).Msg("")
+					return
+				}
+
+				log.Debug().Interface("模拟量", teleindicationAck).Str("node", id.String()).Msg("遥测")
+
 			}
 
 		case modbus.PowerDownFun:
@@ -90,14 +108,12 @@ func handler(conn *modbus.Conn) {
 				log.Error().Err(err).Str("remote", conn.Addr().String()).Msg("")
 				return
 			}
-		case modbus.TelemeteringFun:
-			// 设备接收到485的下发命令，会把485下发的命令也发送给主站
-			log.Debug().Msg("遥信")
+		case modbus.TeleFun:
+			// 设备接收到其他途径（比如：485）的下发命令，会把其他途径下发的命令也发送给主站
+			log.Debug().Msg("设备收到其他途径的遥信")
 
 		default:
-
-			log.Debug().Str("Function", fmt.Sprintf("0x%X", f.Function)).Msg("未处理的命令码")
-
+			log.Debug().Str("Function", fmt.Sprintf("0x%X", f.Function)).Str("Ctrl", fmt.Sprintf("0x%X", f.Ctrl)).Msg("未处理的命令码")
 		}
 	}
 
