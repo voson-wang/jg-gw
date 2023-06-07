@@ -2,6 +2,8 @@ package modbus
 
 import (
 	"errors"
+	"fmt"
+	"github.com/rs/zerolog/log"
 	"net"
 	"sync"
 	"time"
@@ -32,6 +34,8 @@ func (c *Conn) Read(size int, timeout time.Duration) (*Frame, error) {
 		return nil, err
 	}
 
+	log.Debug().Str("read", fmt.Sprintf("% X", buf[:l])).Msg("")
+
 	return NewFrame(buf[:l])
 }
 
@@ -42,6 +46,8 @@ func (c *Conn) Write(frame *Frame, timeout time.Duration) error {
 	defer c.rwc.SetWriteDeadline(time.Time{})
 
 	_, err := c.rwc.Write(frame.Bytes())
+
+	log.Debug().Str("write", fmt.Sprintf("% X", frame.Bytes())).Msg("")
 
 	return err
 }

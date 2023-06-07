@@ -1,14 +1,15 @@
 package main
 
 import (
+	"fmt"
 	"github.com/rs/zerolog/log"
 	"ricn-smart/ricn-jg-gw/modbus"
 	"time"
 )
 
 const (
-	timeout = 150 * time.Second
-	size    = 500 // 设定读取数据的最大长度，必须大于设备发送的数据长度
+	timeout = 60 * time.Second
+	size    = 300 // 设定读取数据的最大长度，必须大于设备发送的数据长度
 )
 
 func handler(conn *modbus.Conn) {
@@ -89,6 +90,14 @@ func handler(conn *modbus.Conn) {
 				log.Error().Err(err).Str("remote", conn.Addr().String()).Msg("")
 				return
 			}
+		case modbus.TelemeteringFun:
+			// 设备接收到485的下发命令，会把485下发的命令也发送给主站
+			log.Debug().Msg("遥信")
+
+		default:
+
+			log.Debug().Str("Function", fmt.Sprintf("0x%X", f.Function)).Msg("未处理的命令码")
+
 		}
 	}
 

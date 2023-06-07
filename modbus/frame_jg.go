@@ -62,7 +62,7 @@ func NewFrame(packet []byte) (*Frame, error) {
 	csCalc := crcModbus(packet[4 : pLen-2])
 
 	if csExpect != csCalc {
-		return nil, fmt.Errorf("frame error: CheckSum (expected 0x%x, got 0x%x)", csExpect, csCalc)
+		return nil, fmt.Errorf("frame error: CheckSum (expected 0x%X, got 0x%X)", csExpect, csCalc)
 	}
 
 	frame := &Frame{

@@ -70,6 +70,7 @@ type (
 )
 
 // 终端、集中器控制
+// 回复主站
 const (
 	DeviceCtrl80 Ctrl = 0x80 // 注册、掉电、心跳
 	DeviceCtrl83 Ctrl = 0x83 // 故障
@@ -77,6 +78,7 @@ const (
 )
 
 // 主站控制
+// 发送给终端
 const (
 	ServerCtrlA Ctrl = 0x0A // 遥信、遥测
 	ServerCtrl3 Ctrl = 0x03 // 故障回复确认
@@ -85,7 +87,7 @@ const (
 // 命令码
 const (
 	FaultFun        Function = 0x2A
-	TelemeteringFun Function = 0x64
+	TelemeteringFun Function = 0x64 // 遥信
 	RegisterFun     Function = 0x8B
 	PowerDownFun    Function = 0x8C
 	HeartBeatFun    Function = 0x8D
@@ -102,7 +104,7 @@ func (i ID) String() string {
 	for _, v := range i {
 		s += fmt.Sprintf("%02X", v)
 	}
-	return strings.TrimLeft(s, "0")
+	return s
 }
 
 func NodesString(is []ID) string {
@@ -129,7 +131,7 @@ func (t *TimeMark) Time() time.Time {
 func (f *Frame) NewLogin() (*Login, error) {
 
 	if f.Ctrl != DeviceCtrl80 {
-		return nil, fmt.Errorf("frame ctrl error: ctrl expect 0x%x,got 0x%x", DeviceCtrl80, f.Ctrl)
+		return nil, fmt.Errorf("frame ctrl error: ctrl expect 0x%X,got 0x%X", DeviceCtrl80, f.Ctrl)
 	}
 
 	data := f.Data
@@ -171,7 +173,7 @@ func (f *Frame) NewHeartBeat() (*HeartBeat, error) {
 func (f *Frame) NewFault() (*Fault, error) {
 
 	if f.Ctrl != DeviceCtrl83 {
-		return nil, fmt.Errorf("frame ctrl error: ctrl expect 0x%x,got 0x%x", DeviceCtrl83, f.Ctrl)
+		return nil, fmt.Errorf("frame ctrl error: ctrl expect 0x%X,got 0x%X", DeviceCtrl83, f.Ctrl)
 	}
 
 	data := f.Data
@@ -256,7 +258,7 @@ func NewTelemetering(address ID) *Frame {
 		Function: TelemeteringFun,
 	}
 
-	f.Data = []byte{0xFF, 0x60, 0x00, 0x00, 0x00, 0x01, 0x00, 0x20}
+	f.Data = []byte{0x80, 0x06, 0x00, 0x00, 0x00, 0x01, 0x00, 0x20}
 
 	return f
 }
@@ -267,11 +269,11 @@ func NewTelemetering(address ID) *Frame {
 func (f *Frame) NewTelemeteringAck() (*TelemeteringAck, error) {
 
 	if f.Ctrl != DeviceCtrl88 {
-		return nil, fmt.Errorf("frame ctrl error: ctrl expect 0x%x,got 0x%x", DeviceCtrl88, f.Ctrl)
+		return nil, fmt.Errorf("frame ctrl error: ctrl expect 0x%X,got 0x%X", DeviceCtrl88, f.Ctrl)
 	}
 
 	if f.Function != TelemeteringFun {
-		return nil, fmt.Errorf("frame function error: function expect 0x%x,got 0x%x", TelemeteringFun, f.Function)
+		return nil, fmt.Errorf("frame function error: function expect 0x%X,got 0x%X", TelemeteringFun, f.Function)
 	}
 
 	data := f.Data
