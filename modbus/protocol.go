@@ -286,6 +286,27 @@ func NewTeleindication(address ID) *Frame {
 	return f
 }
 
+var switchQuantities = map[int]string{
+	1:  "Status",
+	7:  "OverCurrentProtectionA",
+	8:  "OverCurrentProtectionB",
+	9:  "OverCurrentProtectionC",
+	10: "OverLoadProtectionA",
+	11: "OverLoadProtectionB",
+	12: "OverLoadProtectionC",
+	13: "OverVoltageProtectionA",
+	14: "OverVoltageProtectionB",
+	15: "OverVoltageProtectionC",
+	16: "UnderVoltageProtectionA",
+	17: "UnderVoltageProtectionB",
+	18: "UnderVoltageProtectionC",
+	22: "HighTemperatureProtectionA",
+	23: "HighTemperatureProtectionB",
+	24: "HighTemperatureProtectionC",
+	25: "HighTemperatureProtectionN",
+	26: "LeakageProtection",
+}
+
 // NewTelemeteringAck
 // 终端回复的遥信数据
 // 规约 4.1.2
@@ -318,8 +339,9 @@ func (f *Frame) NewTelemeteringAck(values map[string]any) error {
 
 	actualData := data[8:]
 
-	values["Switch"] = actualData[0]
-	values["LeakageProtect"] = actualData[25]
+	for index, name := range switchQuantities {
+		values[name] = actualData[index-1]
+	}
 
 	return nil
 }
@@ -385,22 +407,22 @@ var analogQuantities = []*AnalogQuantity{
 	},
 	{
 		Num:         26,
-		Name:        "Ta",
+		Name:        "T1",
 		Coefficient: 1,
 	},
 	{
 		Num:         27,
-		Name:        "Tb",
+		Name:        "T2",
 		Coefficient: 1,
 	},
 	{
 		Num:         28,
-		Name:        "Tc",
+		Name:        "T3",
 		Coefficient: 1,
 	},
 	{
 		Num:         29,
-		Name:        "TN",
+		Name:        "T4",
 		Coefficient: 1,
 	},
 }
