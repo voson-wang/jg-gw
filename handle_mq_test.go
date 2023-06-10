@@ -50,9 +50,13 @@ var (
 )
 
 func (s *MQTestSuite) TestSetProperty(c *C) {
+	quit := make(chan byte)
 	opts := mq.Init(fmt.Sprintf("%v.%v", ProjectName, "TestSetProperty"))
 	opts.SetOnConnectHandler(func(client mqtt.Client) {
 		if token := client.Subscribe(setActionRequest.RequestId, mq.AtMostOnce, func(client mqtt.Client, message mqtt.Message) {
+			defer func() {
+				quit <- 0
+			}()
 			var result CommonResponse
 			if err := json.Unmarshal(message.Payload(), &result); err != nil {
 				c.Fatal(err)
@@ -63,6 +67,9 @@ func (s *MQTestSuite) TestSetProperty(c *C) {
 		}
 
 		if token := client.Subscribe(setControlRequest.RequestId, mq.AtMostOnce, func(client mqtt.Client, message mqtt.Message) {
+			defer func() {
+				quit <- 0
+			}()
 			var result CommonResponse
 			if err := json.Unmarshal(message.Payload(), &result); err != nil {
 				c.Fatal(err)
@@ -81,20 +88,24 @@ func (s *MQTestSuite) TestSetProperty(c *C) {
 
 	mq.Publish(topic, mq.AtMostOnce, false, setControlRequest)
 
-	quit := make(chan int)
+	<-quit
 	<-quit
 }
 
 func (s *MQTestSuite) TestGetProperty(c *C) {
+	quit := make(chan byte)
 	opts := mq.Init(fmt.Sprintf("%v.%v", ProjectName, "TestGetProperty"))
 	opts.SetOnConnectHandler(func(client mqtt.Client) {
 		if token := client.Subscribe(getActionRequest.RequestId, mq.AtMostOnce, func(client mqtt.Client, message mqtt.Message) {
+			defer func() {
+				quit <- 0
+			}()
 			var result CommonResponse
 			if err := json.Unmarshal(message.Payload(), &result); err != nil {
 				c.Fatal(err)
 			}
 			c.Assert(result.Success, Equals, true)
-			c.Assert(result.Data, Equals, 70)
+			c.Assert(result.Data.(map[string]any)["OverCurrentTripSetting"], Equals, float64(70))
 		}); token.Wait() && token.Error() != nil {
 			log.Error().Err(token.Error()).Msg("")
 		}
@@ -106,6 +117,5 @@ func (s *MQTestSuite) TestGetProperty(c *C) {
 
 	mq.Publish(topic, mq.AtMostOnce, false, getActionRequest)
 
-	quit := make(chan int)
 	<-quit
 }
