@@ -209,14 +209,16 @@ func getProperty(sn string, client mqtt.Client, payload []byte) {
 		return
 	}
 
-	buf, _ := json.Marshal(&CommonResponse{
+	resp := &CommonResponse{
 		RequestId: request.RequestId,
 		Success:   true,
 		Message:   "OK",
 		Data:      data,
-	})
+	}
 
-	log.Info().Str("sn", sn).Interface("request", request).Interface("data", data).Msg("getProperty")
+	buf, _ := json.Marshal(resp)
+
+	log.Info().Str("sn", sn).Interface("resp", resp).Msg("getProperty")
 
 	if token := client.Publish(request.RequestId, mq.AtMostOnce, false, buf); token.Wait() && token.Error() != nil {
 		log.Error().Err(token.Error()).Msg("")
@@ -321,13 +323,14 @@ func setProperty(sn string, client mqtt.Client, payload []byte) {
 		message = "遥控失败"
 	}
 
-	log.Info().Str("sn", sn).Interface("request", request).Bool("success", success).Msg("setProperty")
-
-	buf, _ := json.Marshal(&CommonResponse{
+	resp := &CommonResponse{
 		RequestId: request.RequestId,
 		Success:   success,
 		Message:   message,
-	})
+	}
+	buf, _ := json.Marshal(resp)
+
+	log.Info().Str("sn", sn).Interface("resp", resp).Msg("setProperty")
 
 	if token := client.Publish(request.RequestId, mq.AtMostOnce, false, buf); token.Wait() && token.Error() != nil {
 		log.Error().Err(token.Error()).Msg("")
