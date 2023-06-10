@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/shopspring/decimal"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -58,8 +59,8 @@ type (
 // 终端、集中器控制
 // 回复主站
 const (
-	DeviceCtrl80 Ctrl = 0x80 // 注册、掉电、心跳
-	DeviceCtrl83 Ctrl = 0x83 // 故障
+	DeviceCtrl80 Ctrl = 0x80 // 注册、掉电、心跳、遥控回复、写多个参数和定值
+	DeviceCtrl83 Ctrl = 0x83 // 故障、读多个参数和定值
 	DeviceCtrl88 Ctrl = 0x88 // 遥信
 )
 
@@ -67,19 +68,22 @@ const (
 // 发送给终端
 const (
 	ServerCtrlA Ctrl = 0x0A // 遥信、遥测
-	ServerCtrl3 Ctrl = 0x03 // 故障回复确认
+	ServerCtrl3 Ctrl = 0x03 // 故障回复确认、遥控、写多个参数和定值
 )
 
 // 命令码
 const (
-	FaultFun     Function = 0x2A
-	TeleFun      Function = 0x64 // 遥信、遥测
-	RegisterFun  Function = 0x8B
-	PowerDownFun Function = 0x8C
-	HeartBeatFun Function = 0x8D
+	FaultFun      Function = 0x2A
+	Telecontrol   Function = 0x2D // 遥控
+	TeleFun       Function = 0x64 // 遥信、遥测
+	RegisterFun   Function = 0x8B
+	PowerDownFun  Function = 0x8C
+	HeartBeatFun  Function = 0x8D
+	MultiReadFun  Function = 0xCA // 读多个参数和定值
+	MultiWriteFun Function = 0xCB // 写多个参数和定值
 )
 
-// Frame.Data的数据头
+// NewWriteFrame.Data的数据头
 // 遥信、遥测用的是相同的控制和命名码，所不同的是在Header
 var (
 	FaultHeader           = [5]byte{0x00, 0x03, 0x00, 0x00, 0x00}
@@ -89,6 +93,11 @@ var (
 	TeleindicationHeader  = [8]byte{0x80, 0x06, 0x00, 0x00, 0x00, 0x01, 0x40, 0x20}
 	// TeleindicationAckHeader 规约遥测数据头和实际不相符，实际的数据头最后一个报文是0x00，规约上是0x20
 	TeleindicationAckHeader = [8]byte{0x80, 0x07, 0x00, 0x00, 0x00, 0x01, 0x40, 0x00}
+	TelecontrolHeader       = [5]byte{0x81, 0x06, 0x00, 0x00, 0x00} // 遥控头
+	TelecontrolAckHeader    = [5]byte{0x81, 0x07, 0x00, 0x00, 0x00} // 遥控头
+	MultiParamsHeader       = [4]byte{0x06, 0x00, 0x00, 0x00}
+	MultiWriteAckHeader     = [5]byte{0x00, 0x07, 0x00, 0x00, 0x00}
+	MultiReadAckHeader      = [4]byte{0x07, 0x00, 0x00, 0x00}
 )
 
 func (i ID) String() string {
@@ -246,7 +255,7 @@ func (f *Frame) NewFaultAck(fault *Fault) *Frame {
 func NewTelemetering(address ID) *Frame {
 	f := &Frame{
 		Ctrl:     ServerCtrlA,
-		Address:  address,
+		ID:       address,
 		Function: TeleFun,
 	}
 
@@ -269,7 +278,7 @@ func NewTelemetering(address ID) *Frame {
 func NewTeleindication(address ID) *Frame {
 	f := &Frame{
 		Ctrl:     ServerCtrlA,
-		Address:  address,
+		ID:       address,
 		Function: TeleFun,
 	}
 
@@ -287,7 +296,7 @@ func NewTeleindication(address ID) *Frame {
 }
 
 var switchQuantities = map[int]string{
-	1:  "Status",
+	1:  "Switch",
 	7:  "OverCurrentProtectionA",
 	8:  "OverCurrentProtectionB",
 	9:  "OverCurrentProtectionC",
@@ -459,4 +468,16 @@ func (f *Frame) NewTeleindicationAck(values map[string]any) error {
 	}
 
 	return nil
+}
+
+func NewID(s string) (ID, error) {
+	var bs = make([]byte, 6)
+	for index := range bs {
+		m, err := strconv.Atoi(s[index*2 : index*2+2])
+		if err != nil {
+			return [6]byte{}, err
+		}
+		bs[index] = byte(((m / 10) << 4) + m%10)
+	}
+	return ID(bs), nil
 }

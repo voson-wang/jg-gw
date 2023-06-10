@@ -17,17 +17,10 @@ const port = 65010
 var (
 	GitCommitID string
 	ProjectName string
-	ip          string
 	debug       = os.Getenv("DEBUG") == "true"
 )
 
 func init() {
-	var err error
-	ip, err = util.GetLocalIP()
-	if err != nil {
-		panic(err)
-	}
-
 	if ProjectName == "" {
 		// 如果ProjectName不存在，则尝试读取go.mod中的module作为项目名
 		ProjectName = util.GetProjectNameFromModule()
@@ -35,8 +28,8 @@ func init() {
 
 	logger.Init(debug, fmt.Sprintf("log/%v.log", ProjectName))
 
-	opts := mq.Init(fmt.Sprintf("%v.%v", ProjectName, ip))
-
+	opts := mq.Init(fmt.Sprintf("%v.%v", ProjectName, GitCommitID))
+	opts.SetOnConnectHandler(handleMQConn)
 	mq.Connect(opts)
 }
 
@@ -52,7 +45,7 @@ func main() {
 		}
 	}()
 
-	log.Info().Str("commit", GitCommitID).Str("ip", ip).
+	log.Info().Str("commit", GitCommitID).
 		Bool("debug", debug).Int("port", port).Msg(ProjectName + " started")
 
 	quit := make(chan os.Signal)

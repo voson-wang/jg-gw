@@ -26,12 +26,10 @@ type Ctrl byte
 type Function byte
 
 type Frame struct {
-	Size     byte     // 长度L
 	Ctrl     Ctrl     // 控制
-	Address  ID       // 终端地址
+	ID       ID       // 终端地址，开关（节点）编号
 	Function Function // 命令码
 	Data     []byte   // 用户数据
-	CS       byte     // 校验CS
 }
 
 const startFlag byte = 0x68 // 起始字符
@@ -53,7 +51,7 @@ func NewFrame(packet []byte) (*Frame, error) {
 	// 获取长度L
 	l := len(packet[4 : pLen-2])
 
-	if byte(l) != packet[1] {
+	if byte(l) != packet[1] || packet[1] != packet[2] {
 		return nil, fmt.Errorf("frame error: packet lenght error")
 	}
 
@@ -66,12 +64,10 @@ func NewFrame(packet []byte) (*Frame, error) {
 	}
 
 	frame := &Frame{
-		Size:     packet[1],
 		Ctrl:     Ctrl(packet[4]),
-		Address:  [6]byte(packet[5:11]),
+		ID:       [6]byte(packet[5:11]),
 		Function: Function(packet[11]),
 		Data:     packet[12 : pLen-2],
-		CS:       csExpect,
 	}
 
 	return frame, nil
@@ -90,12 +86,12 @@ func (f *Frame) Bytes() []byte {
 	b[0] = startFlag
 	b[3] = startFlag
 	b[4] = byte(f.Ctrl)
-	b[5] = f.Address[0]
-	b[6] = f.Address[1]
-	b[7] = f.Address[2]
-	b[8] = f.Address[3]
-	b[9] = f.Address[4]
-	b[10] = f.Address[5]
+	b[5] = f.ID[0]
+	b[6] = f.ID[1]
+	b[7] = f.ID[2]
+	b[8] = f.ID[3]
+	b[9] = f.ID[4]
+	b[10] = f.ID[5]
 	b[11] = byte(f.Function)
 
 	b = append(b, f.Data...)

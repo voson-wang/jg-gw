@@ -60,6 +60,14 @@ func (c *Conn) Addr() net.Addr {
 	return c.rwc.RemoteAddr()
 }
 
+func (c *Conn) Lock() {
+	c.mu.Lock()
+}
+
+func (c *Conn) Unlock() {
+	c.mu.Unlock()
+}
+
 func NewServer(address string) *Server {
 	return &Server{
 		address: address,
