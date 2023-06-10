@@ -134,40 +134,47 @@ func (r *ActionRegister) ParserReadResp(frame *Frame) (map[string]any, error) {
 
 	data := frame.Data
 
-	if len(data) < 6 {
+	l := len(data)
+
+	if l == 5 {
+		return nil, fmt.Errorf("错误的信息地址或组号")
+	}
+
+	if len(data) < 12 {
 		return nil, fmt.Errorf("frame error: packet lenght expect >= 6, got %v", len(data))
 	}
 
-	if data[0] != MultiReadAckHeader[0] ||
-		data[1] != MultiReadAckHeader[1] ||
-		data[2] != MultiReadAckHeader[2] ||
-		data[3] != MultiReadAckHeader[3] ||
-		data[4] != 0x00 ||
+	if data[0] != 0x01 ||
+		data[1] != MultiReadAckHeader[0] ||
+		data[2] != MultiReadAckHeader[1] ||
+		data[3] != MultiReadAckHeader[2] ||
+		data[4] != MultiReadAckHeader[3] ||
 		data[5] != 0x00 ||
+		data[6] != 0x00 ||
 		// 特征标识
-		data[6] != 0x01 {
+		data[7] != 0x00 {
 		return nil, errors.New("invalid telecontrol ack header")
 	}
 
-	address := binary.LittleEndian.Uint16(data[7:9])
+	address := binary.LittleEndian.Uint16(data[8:10])
 	if address != r.address {
 		return nil, fmt.Errorf("expect address 0x%X, got 0x%X", r.address, address)
 	}
 
 	// Tag类型，见扩展规约 附件1：数据类型
-	tag := data[9]
+	tag := data[10]
 	if tag != r.tag {
 		return nil, fmt.Errorf("expect tag 0x%X, got 0x%X", r.tag, tag)
 	}
 
-	l := data[10]
-	if l != r.len {
-		return nil, fmt.Errorf("expect len 0x%X, got 0x%X", r.len, l)
+	dataLen := data[11]
+	if dataLen != r.len {
+		return nil, fmt.Errorf("expect len 0x%X, got 0x%X", r.len, dataLen)
 	}
 
 	result := make(map[string]any)
 
-	r.Decode(data[11:11+l], result)
+	r.Decode(data[12:12+l], result)
 
 	return result, nil
 }
