@@ -122,5 +122,7 @@ func handler(conn *modbus.Conn) {
 				log.Debug().Str("Function", fmt.Sprintf("0x%X", f.Function)).Str("Ctrl", fmt.Sprintf("0x%X", f.Ctrl)).Msg("未处理的命令码")
 			}
 		}(conn)
+		// 为接收请求留下时间
+		time.Sleep(10 * time.Second)
 	}
 }
