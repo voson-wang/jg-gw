@@ -28,12 +28,12 @@ func init() {
 
 	logger.Init(debug, fmt.Sprintf("log/%v.log", ProjectName))
 
-	opts := mq.Init(fmt.Sprintf("%v.%v", ProjectName, GitCommitID))
-	opts.SetOnConnectHandler(handleMQConn)
-	mq.Connect(opts)
 }
 
 func main() {
+	opts := mq.Init(fmt.Sprintf("%v.%v", ProjectName, GitCommitID))
+	opts.SetOnConnectHandler(handleMQConn)
+	mq.Connect(opts)
 
 	server := modbus.NewServer(fmt.Sprintf(":%v", port))
 
