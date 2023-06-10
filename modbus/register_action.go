@@ -92,8 +92,8 @@ func (r *ActionRegister) Encode(params map[string]any) ([]byte, error) {
 }
 
 func (r *ActionRegister) ParserWriteResp(frame *Frame) (bool, error) {
-	if frame.Ctrl != ServerCtrl3 {
-		return false, fmt.Errorf("expect ctrl 0x%X, got 0x%X", ServerCtrl3, frame.Ctrl)
+	if frame.Ctrl != DeviceCtrl80 {
+		return false, fmt.Errorf("expect ctrl 0x%X, got 0x%X", DeviceCtrl80, frame.Ctrl)
 	}
 
 	if frame.Function != MultiWriteFun {

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	mqtt "github.com/eclipse/paho.mqtt.golang"
 	"github.com/rs/zerolog/log"
@@ -48,12 +49,52 @@ var (
 	}
 )
 
+func (s *MQTestSuite) TestSetProperty(c *C) {
+	opts := mq.Init(fmt.Sprintf("%v.%v", ProjectName, "TestSetProperty"))
+	opts.SetOnConnectHandler(func(client mqtt.Client) {
+		if token := client.Subscribe(setActionRequest.RequestId, mq.AtMostOnce, func(client mqtt.Client, message mqtt.Message) {
+			var result CommonResponse
+			if err := json.Unmarshal(message.Payload(), &result); err != nil {
+				c.Fatal(err)
+			}
+			c.Assert(result.Success, Equals, true)
+		}); token.Wait() && token.Error() != nil {
+			log.Error().Err(token.Error()).Msg("")
+		}
+
+		if token := client.Subscribe(setControlRequest.RequestId, mq.AtMostOnce, func(client mqtt.Client, message mqtt.Message) {
+			var result CommonResponse
+			if err := json.Unmarshal(message.Payload(), &result); err != nil {
+				c.Fatal(err)
+			}
+			c.Assert(result.Success, Equals, true)
+		}); token.Wait() && token.Error() != nil {
+			log.Error().Err(token.Error()).Msg("")
+		}
+	})
+
+	mq.Connect(opts)
+
+	topic := ProjectName + "/" + sn + "/property/set"
+
+	mq.Publish(topic, mq.AtMostOnce, false, setActionRequest)
+
+	mq.Publish(topic, mq.AtMostOnce, false, setControlRequest)
+
+	quit := make(chan int)
+	<-quit
+}
+
 func (s *MQTestSuite) TestGetProperty(c *C) {
 	opts := mq.Init(fmt.Sprintf("%v.%v", ProjectName, "TestGetProperty"))
 	opts.SetOnConnectHandler(func(client mqtt.Client) {
 		if token := client.Subscribe(getActionRequest.RequestId, mq.AtMostOnce, func(client mqtt.Client, message mqtt.Message) {
-			got := string(message.Payload())
-			fmt.Println(got)
+			var result CommonResponse
+			if err := json.Unmarshal(message.Payload(), &result); err != nil {
+				c.Fatal(err)
+			}
+			c.Assert(result.Success, Equals, true)
+			c.Assert(result.Data, Equals, 70)
 		}); token.Wait() && token.Error() != nil {
 			log.Error().Err(token.Error()).Msg("")
 		}
@@ -67,8 +108,4 @@ func (s *MQTestSuite) TestGetProperty(c *C) {
 
 	quit := make(chan int)
 	<-quit
-}
-
-func (s *MQTestSuite) TestSetProperty(c *C) {
-
 }

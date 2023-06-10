@@ -69,8 +69,8 @@ func (r *ControlRegister) ParserWriteResp(frame *Frame) (bool, error) {
 
 	data := frame.Data
 
-	if len(data) != 9 {
-		return false, fmt.Errorf("frame error: packet lenght expect 9, got %v", len(data))
+	if len(data) != 8 {
+		return false, fmt.Errorf("frame error: packet lenght expect 8, got %v", len(data))
 	}
 
 	if data[0] != TelecontrolAckHeader[0] ||
@@ -88,7 +88,7 @@ func (r *ControlRegister) ParserWriteResp(frame *Frame) (bool, error) {
 	}
 
 	// 遥控成功
-	if data[8] == 0x00 {
+	if data[7] == 0x00 {
 		return true, nil
 	}
 
