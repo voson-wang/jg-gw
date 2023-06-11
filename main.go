@@ -31,7 +31,13 @@ func init() {
 }
 
 func main() {
-	opts := mq.Init(fmt.Sprintf("%v.%v", ProjectName, GitCommitID))
+	ip, err := util.GetLocalIP()
+	if err != nil {
+		log.Fatal().Err(err).Msg("")
+	}
+
+	// 因为会有多个应用实例运行在不同的主机上，因此不能使用可能重复的GitCommitID作为客户端ID
+	opts := mq.Init(fmt.Sprintf("%v.%v", ProjectName, ip))
 	opts.SetOnConnectHandler(handleMQConn)
 	mq.Connect(opts)
 
@@ -46,7 +52,7 @@ func main() {
 	}()
 
 	log.Info().Str("commit", GitCommitID).
-		Bool("debug", debug).Int("port", port).Msg(ProjectName + " started")
+		Bool("debug", debug).Int("port", port).Str("ip", ip).Msg(ProjectName + " started")
 
 	quit := make(chan os.Signal)
 	signal.Notify(quit, syscall.SIGTERM, os.Interrupt)
