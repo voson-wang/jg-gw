@@ -47,5 +47,5 @@ func (s *ProtocolTestSuite) TestNewHeartBeat(c *C) {
 	}
 
 	c.Assert(heartBeat.ID.String(), Equals, "111222333111")
-	c.Assert(heartBeat.NodeIDs[0].String(), Equals, "72110320044")
+	c.Assert(heartBeat.NodeIDs[0].String(), Equals, "072110320044")
 }
