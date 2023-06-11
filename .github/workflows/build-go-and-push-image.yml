@@ -14,7 +14,7 @@ env:
   IMAGE_NAME: ${{ github.repository }}
   REPOSITORY_NAME: ${{ github.event.repository.name }}
   REGISTRY: registry.cn-shanghai.aliyuncs.com
-  REGISTRY_NAMESPACE: winstar-smart
+  REGISTRY_NAMESPACE: ricnsmart
 
 jobs:
   build-go-package-and-push-image:
