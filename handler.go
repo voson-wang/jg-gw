@@ -3,8 +3,10 @@ package main
 import (
 	"fmt"
 	"github.com/rs/zerolog/log"
+	"os"
 	"ricn-smart/jg-gw/modbus"
 	"ricn-smart/jg-gw/mq"
+	"strings"
 	"time"
 )
 
@@ -14,13 +16,19 @@ const (
 )
 
 func handler(conn *modbus.Conn) {
+	blackList := os.Getenv("BLACK_LIST")
+	for _, ip := range strings.Split(blackList, ",") {
+		if strings.Split(conn.Addr().String(), ":")[0] == ip {
+			return
+		}
+	}
+
 	for {
 		func(conn *modbus.Conn) {
 			conn.Lock()
 			defer conn.Unlock()
 			f, err := conn.Read(size, timeout)
 			if err != nil {
-				log.Error().Err(err).Str("remote", conn.Addr().String()).Msg("")
 				return
 			}
 
