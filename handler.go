@@ -29,7 +29,7 @@ func handler(conn *modbus.Conn) {
 			defer conn.Unlock()
 			f, err := conn.Read(size, timeout)
 			if err != nil {
-				log.Error().Err(err).Msg("")
+				log.Error().Err(err).Str("remote", conn.Addr().String()).Msg("")
 				return
 			}
 
@@ -69,41 +69,41 @@ func handler(conn *modbus.Conn) {
 				for _, id := range heartBeat.NodeIDs {
 					// 遥信读取开关状态
 					if err := conn.Write(modbus.NewTelemetering(id), timeout); err != nil {
-						log.Error().Err(err).Str("remote", conn.Addr().String()).Msg("")
+						log.Error().Err(err).Str("sn", sn).Str("node", id.String()).Msg("")
 						return
 					}
 
 					telemeterAckFrame, err := conn.Read(size, timeout)
 					if err != nil {
-						log.Error().Err(err).Str("remote", conn.Addr().String()).Msg("")
+						log.Error().Err(err).Str("sn", sn).Str("node", id.String()).Msg("")
 						return
 					}
 
 					data := make(map[string]any)
 
 					if err := telemeterAckFrame.NewTelemeteringAck(data); err != nil {
-						log.Error().Err(err).Str("remote", conn.Addr().String()).Msg("")
+						log.Error().Err(err).Str("sn", sn).Str("node", id.String()).Msg("")
 						return
 					}
 
 					// 遥测读取电压等数据
 					if err := conn.Write(modbus.NewTeleindication(id), timeout); err != nil {
-						log.Error().Err(err).Str("remote", conn.Addr().String()).Msg("")
+						log.Error().Err(err).Str("sn", sn).Str("node", id.String()).Msg("")
 						return
 					}
 
 					teleindicationAckFrame, err := conn.Read(size, timeout)
 					if err != nil {
-						log.Error().Err(err).Str("remote", conn.Addr().String()).Msg("")
+						log.Error().Err(err).Str("sn", sn).Str("node", id.String()).Msg("")
 						return
 					}
 
 					if err := teleindicationAckFrame.NewTeleindicationAck(data); err != nil {
-						log.Error().Err(err).Str("remote", conn.Addr().String()).Msg("")
+						log.Error().Err(err).Str("sn", sn).Str("node", id.String()).Msg("")
 						return
 					}
 
-					log.Debug().Interface("data", data).Str("node", id.String()).Msg("开关和模拟量")
+					log.Debug().Str("sn", sn).Interface("data", data).Str("node", id.String()).Msg("开关和模拟量")
 
 					mq.Publish(ProjectName+"/"+sn+"/"+id.String()+"/property", mq.AtMostOnce, false, data)
 				}
@@ -128,7 +128,7 @@ func handler(conn *modbus.Conn) {
 				log.Debug().Msg("设备收到其他途径的遥信")
 
 			default:
-				log.Debug().Str("Function", fmt.Sprintf("0x%X", f.Function)).Str("Ctrl", fmt.Sprintf("0x%X", f.Ctrl)).Msg("未处理的命令码")
+				log.Debug().Str("remote", conn.Addr().String()).Str("Function", fmt.Sprintf("0x%X", f.Function)).Str("Ctrl", fmt.Sprintf("0x%X", f.Ctrl)).Msg("未处理的命令码")
 			}
 		}(conn)
 		// 为接收请求留下时间
