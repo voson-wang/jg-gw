@@ -6,6 +6,7 @@ import (
 	mqtt "github.com/eclipse/paho.mqtt.golang"
 	"github.com/rs/zerolog/log"
 	. "gopkg.in/check.v1"
+	"os"
 	"ricn-smart/jg-gw/mq"
 	"testing"
 )
@@ -50,6 +51,9 @@ var (
 )
 
 func (s *MQTestSuite) TestSetProperty(c *C) {
+	if os.Getenv("MQTT_ADDRESS") == "" {
+		c.Skip("MQTT_ADDRESS is not set")
+	}
 	quit := make(chan byte)
 	opts := mq.Init(fmt.Sprintf("%v.%v", ProjectName, "TestSetProperty"))
 	opts.SetOnConnectHandler(func(client mqtt.Client) {
@@ -93,6 +97,9 @@ func (s *MQTestSuite) TestSetProperty(c *C) {
 }
 
 func (s *MQTestSuite) TestGetProperty(c *C) {
+	if os.Getenv("MQTT_ADDRESS") == "" {
+		c.Skip("MQTT_ADDRESS is not set")
+	}
 	quit := make(chan byte)
 	opts := mq.Init(fmt.Sprintf("%v.%v", ProjectName, "TestGetProperty"))
 	opts.SetOnConnectHandler(func(client mqtt.Client) {

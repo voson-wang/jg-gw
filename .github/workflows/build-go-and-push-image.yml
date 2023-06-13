@@ -1,0 +1,91 @@
+name: Build Go and publish Docker image
+
+on:
+  push:
+    branches:
+      - 'master'
+      - 'main'
+  pull_request:
+    branches:
+      - 'master'
+      - 'main'
+
+env:
+  IMAGE_NAME: ${{ github.repository }}
+  REPOSITORY_NAME: ${{ github.event.repository.name }}
+  REGISTRY: registry.cn-shanghai.aliyuncs.com
+  REGISTRY_NAMESPACE: ricnsmart
+
+jobs:
+  build-go-package-and-push-image:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.20.x'
+
+      - name: Set commit id
+        run: |
+          commit_id=$(echo ${{ github.sha }} | cut -c1-7)
+          echo "commit_id=${commit_id}" >> $GITHUB_ENV
+
+      - name: Build
+        run: |
+          export CGO_ENABLED=0
+          export GOOS=linux
+          export GOARCH=amd64
+          go mod tidy
+          go build -o ${{ env.REPOSITORY_NAME }} -ldflags ' -X 'main.ProjectName=${{ env.REPOSITORY_NAME }}' -X 'main.GitCommitID=${{ env.commit_id }}'' 
+          chmod +x ${{ env.REPOSITORY_NAME }}
+
+      - name: Test
+        run: go test -v ./...
+
+      - name: Create Dockerfile
+        run: |
+          touch Dockerfile
+          echo 'FROM alpine' >> Dockerfile
+          echo 'Add ${{ env.REPOSITORY_NAME }} ${{ env.REPOSITORY_NAME }}' >> Dockerfile
+          echo 'CMD ["./${{ env.REPOSITORY_NAME }}"]' >> Dockerfile
+          chmod 777 Dockerfile
+
+      - name: Archive production artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: ${{ env.REPOSITORY_NAME }}
+          path: ${{ env.REPOSITORY_NAME }}
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v2
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ secrets.ALIYUN_REGISTRY_USERNAME }}
+          password: ${{ secrets.ALIYUN_REGISTRY_PASSWORD }}
+
+      - name: Extract metadata (tags, labels) for Docker
+        id: meta
+        uses: docker/metadata-action@v4
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v4
+        with:
+          context: .
+          push: true
+          tags: ${{ env.REGISTRY }}/${{ env.REGISTRY_NAMESPACE }}/${{ env.REPOSITORY_NAME }}:latest,${{ env.REGISTRY }}/${{ env.REGISTRY_NAMESPACE }}/${{ env.REPOSITORY_NAME }}:${{ env.commit_id }}
+          labels: ${{ steps.meta.outputs.labels }}
+          
+      - name: Notify WeChat Group
+        env:
+          WEBHOOK_URL: ${{ secrets.WECHAT_WEBHOOK_URL }}
+        run: |
+          curl -H "Content-Type: application/json" -X POST -d '{"msgtype": "text", "text": {"content": "${{ env.REPOSITORY_NAME }}构建成功！"}}' $WEBHOOK_URL
+                        
