@@ -29,6 +29,7 @@ func handler(conn *modbus.Conn) {
 			defer conn.Unlock()
 			f, err := conn.Read(size, timeout)
 			if err != nil {
+				log.Error().Err(err).Msg("")
 				return
 			}
 
