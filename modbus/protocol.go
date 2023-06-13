@@ -91,8 +91,8 @@ var (
 	TelemeteringHeader    = [8]byte{0x80, 0x06, 0x00, 0x00, 0x00, 0x01, 0x00, 0x20}
 	TelemeteringAckHeader = [8]byte{0x80, 0x07, 0x00, 0x00, 0x00, 0x01, 0x00, 0x20}
 	TeleindicationHeader  = [8]byte{0x80, 0x06, 0x00, 0x00, 0x00, 0x01, 0x40, 0x20}
-	// TeleindicationAckHeader 规约遥测数据头和实际不相符，实际的数据头最后一个报文是0x00，规约上是0x20
-	TeleindicationAckHeader = [8]byte{0x80, 0x07, 0x00, 0x00, 0x00, 0x01, 0x40, 0x00}
+	// TeleindicationAckHeader 规约遥测数据头共8位，最后一个字节规约上是0x20，实际上有时候是0x00，因此这里不做限制
+	TeleindicationAckHeader = [7]byte{0x80, 0x07, 0x00, 0x00, 0x00, 0x01, 0x40}
 	TelecontrolHeader       = [5]byte{0x81, 0x06, 0x00, 0x00, 0x00} // 遥控头
 	TelecontrolAckHeader    = [5]byte{0x81, 0x07, 0x00, 0x00, 0x00} // 遥控头
 	MultiParamsHeader       = [4]byte{0x06, 0x00, 0x00, 0x00}
@@ -456,8 +456,7 @@ func (f *Frame) NewTeleindicationAck(values map[string]any) error {
 		data[3] != TeleindicationAckHeader[3] ||
 		data[4] != TeleindicationAckHeader[4] ||
 		data[5] != TeleindicationAckHeader[5] ||
-		data[6] != TeleindicationAckHeader[6] ||
-		data[7] != TeleindicationAckHeader[7] {
+		data[6] != TeleindicationAckHeader[6] {
 		return errors.New("frame data error:  packet format error")
 	}
 
